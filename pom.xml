@@ -1,18 +1,16 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>27.0.1</version>
+		<version>28.0.0</version>
 		<relativePath />
 	</parent>
 
-
-	<groupId>de.mpicbg.ulman</groupId>
-	<artifactId>CTC-paper-FijiPlugins</artifactId>
-	<version>1.4.5</version>
+	<groupId>net.celltrackingchallenge</groupId>
+	<artifactId>measures</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
 
 	<build>
 		<plugins>
@@ -61,20 +59,20 @@
 	</build>
 
 	<organization>
-		<name>MPI-CBG</name>
-		<url>http://www.mpi-cbg.de</url>
+		<name>The Cell Tracking Challenge</name>
+		<url>http://celltrackingchallenge.net</url>
 	</organization>
 
-	<name>CTC-paper FijiPlugins</name>
-	<description>Implementation of measures and front-end plugins directly used in the CTC paper.</description>
-	<url>https://github.com/xulman/CTC-FijiPlugins</url>
+	<name>Cell Tracking Challenge -- Java Measures</name>
+	<description>Java implementation of measures for quantitative evaluation of biomedical tracking in general.</description>
+	<url>https://github.com/CellTrackingChallenge/measures</url>
 	<inceptionYear>2017</inceptionYear>
 
 	<packaging>jar</packaging>
 	<licenses>
 		<license>
-			<name>CC0 1.0 Universal License</name>
-			<url>http://creativecommons.org/publicdomain/zero/1.0/</url>
+			<name>Simplified BSD</name>
+			<url>https://choosealicense.com/licenses/bsd-2-clause/</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
@@ -110,24 +108,28 @@
 
 
 	<scm>
-		<connection>scm:git:git://github.com/xulman/CTC-FijiPlugins</connection>
-		<developerConnection>scm:git:git://github.com/xulman/CTC-FijiPlugins</developerConnection>
+		<connection>scm:git:git://github.com/CellTrackingChallenge/measures</connection>
+		<developerConnection>scm:git:git://github.com/CellTrackingChallenge/measures</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/xulman/CTC-FijiPlugins</url>
+		<url>https://github.com/CellTrackingChallenge/measures</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>http://github.com/xulman/CTC-FijiPlugins/issues</url>
+		<url>http://github.com/CellTrackingChallenge/measures/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>None</system>
+		<system>Travis CI</system>
+		<url>https://travis-ci.com/CellTrackingChallenge/measures</url>
 	</ciManagement>
 
 	<properties>
-		<package-name>de.mpicbg.ulman.ctc</package-name>
-		<license.licenseName>cc0</license.licenseName>
-		<license.copyrightOwners>N/A</license.copyrightOwners>
-		<license.projectName>CTC-FijiPlugins</license.projectName>
+		<package-name>net.celltrackingchallenge.measures</package-name>
+		<license.licenseName>BSD 2-Clause</license.licenseName>
+		<license.copyrightOwners>xulman</license.copyrightOwners>
+		<license.projectName>CTC-measures</license.projectName>
+
+		<!-- NB: Deploy releases to the SciJava Maven repository. -->
+		<releaseProfiles>deploy-to-scijava</releaseProfiles>
 	</properties>
 
 	<repositories>
@@ -150,13 +152,6 @@
 					<artifactId>xalan</artifactId>
 				</exclusion>
 			</exclusions>
-		</dependency>
-
-		<!-- to start and test plugins (from the ImageJ GUI) -->
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej</artifactId>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
