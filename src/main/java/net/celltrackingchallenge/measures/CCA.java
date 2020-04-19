@@ -35,8 +35,8 @@ import java.io.IOException;
 import java.util.Vector;
 import java.util.HashMap;
 
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.Track;
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.Fork;
+import net.celltrackingchallenge.measures.TrackDataCache.Track;
+import net.celltrackingchallenge.measures.TrackDataCache.Fork;
 
 public class CCA
 {

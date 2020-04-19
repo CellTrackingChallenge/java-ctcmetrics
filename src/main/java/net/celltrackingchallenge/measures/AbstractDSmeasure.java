@@ -32,8 +32,6 @@ import org.scijava.log.LogService;
 import io.scif.img.ImgIOException;
 import java.io.IOException;
 
-import de.mpicbg.ulman.ctc.workers.ImgQualityDataCache;
-
 public class AbstractDSmeasure
 {
 	///shortcuts to some Fiji services

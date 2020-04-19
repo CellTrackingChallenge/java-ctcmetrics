@@ -39,7 +39,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.Iterator;
 
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.TemporalLevel;
+import net.celltrackingchallenge.measures.TrackDataCache.TemporalLevel;
 
 public class DET extends TRA
 {

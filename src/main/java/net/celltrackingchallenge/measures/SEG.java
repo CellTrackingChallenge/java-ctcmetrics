@@ -47,7 +47,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.List;
 
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.TemporalLevel;
+import net.celltrackingchallenge.measures.TrackDataCache.TemporalLevel;
 
 public class SEG
 {

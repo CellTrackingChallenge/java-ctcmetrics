@@ -36,8 +36,8 @@ import java.util.Vector;
 import java.util.Map;
 import java.util.HashMap;
 
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.Track;
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.TemporalLevel;
+import net.celltrackingchallenge.measures.TrackDataCache.Track;
+import net.celltrackingchallenge.measures.TrackDataCache.TemporalLevel;
 
 public class CT
 {

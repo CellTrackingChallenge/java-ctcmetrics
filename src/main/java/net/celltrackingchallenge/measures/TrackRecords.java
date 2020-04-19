@@ -34,7 +34,7 @@ import java.util.HashMap;
 
 import org.scijava.log.LogService;
 
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.Track;
+import net.celltrackingchallenge.measures.TrackDataCache.Track;
 
 /**
  * Collection of individual tracks available for a time lapse data.

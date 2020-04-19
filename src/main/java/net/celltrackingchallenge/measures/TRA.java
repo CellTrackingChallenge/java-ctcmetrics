@@ -40,8 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
 
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.Track;
-import de.mpicbg.ulman.ctc.workers.TrackDataCache.TemporalLevel;
+import net.celltrackingchallenge.measures.TrackDataCache.Track;
+import net.celltrackingchallenge.measures.TrackDataCache.TemporalLevel;
 
 public class TRA
 {
