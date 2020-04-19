@@ -1,3 +1,0 @@
-GroupNickname1   dataFolder1
-GroupNickname2   dataFolder2
-GroupNickname3   dataFolder3
