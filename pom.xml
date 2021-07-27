@@ -4,13 +4,82 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>28.0.0</version>
-		<relativePath />
+		<version>30.0.0</version>
 	</parent>
 
 	<groupId>net.celltrackingchallenge</groupId>
-	<artifactId>measures</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<artifactId>CTC-measures</artifactId>
+	<version>0.9.0</version>
+
+	<organization>
+		<name>The Cell Tracking Challenge</name>
+		<url>http://celltrackingchallenge.net</url>
+	</organization>
+
+	<name>Cell Tracking Challenge -- Java Measures</name>
+	<description>Java implementation of measures for quantitative evaluation of biomedical tracking in general.</description>
+	<url>https://github.com/CellTrackingChallenge/measures</url>
+	<inceptionYear>2017</inceptionYear>
+
+	<licenses>
+		<license>
+			<name>Simplified BSD</name>
+			<url>https://choosealicense.com/licenses/bsd-2-clause/</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>xulman</id>
+			<name>Vladimír Ulman</name>
+			<url>http://www.fi.muni.cz/~xulman/</url>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+	</developers>
+
+	<contributors>
+		<contributor>
+			<name>None</name>
+		</contributor>
+	</contributors>
+
+	<mailingLists>
+		<mailingList>
+			<name>ImageJ Forum</name>
+			<archive>http://forum.imagej.net/</archive>
+		</mailingList>
+	</mailingLists>
+
+	<!-- ====================================== -->
+
+	<scm>
+		<tag>HEAD</tag>
+		<url>https://github.com/CellTrackingChallenge/measures</url>
+	</scm>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>http://github.com/CellTrackingChallenge/measures/issues</url>
+	</issueManagement>
+	<ciManagement>
+		<system>Travis CI</system>
+		<url>https://travis-ci.com/CellTrackingChallenge/measures</url>
+	</ciManagement>
+
+	<distributionManagement>
+		<repository>
+			<id>it4i</id>
+			<url>https://artifactory.cs.vsb.cz/it4i/</url>
+		</repository>
+	</distributionManagement>
 
 	<build>
 		<plugins>
@@ -58,78 +127,17 @@
 		</plugins>
 	</build>
 
-	<organization>
-		<name>The Cell Tracking Challenge</name>
-		<url>http://celltrackingchallenge.net</url>
-	</organization>
-
-	<name>Cell Tracking Challenge -- Java Measures</name>
-	<description>Java implementation of measures for quantitative evaluation of biomedical tracking in general.</description>
-	<url>https://github.com/CellTrackingChallenge/measures</url>
-	<inceptionYear>2017</inceptionYear>
-
 	<packaging>jar</packaging>
-	<licenses>
-		<license>
-			<name>Simplified BSD</name>
-			<url>https://choosealicense.com/licenses/bsd-2-clause/</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
 
-	<developers>
-		<developer>
-			<id>xulman</id>
-			<name>Vladimír Ulman</name>
-			<url>http://www.fi.muni.cz/~xulman/</url>
-			<roles>
-				<role>founder</role>
-				<role>lead</role>
-				<role>developer</role>
-				<role>debugger</role>
-				<role>reviewer</role>
-				<role>support</role>
-				<role>maintainer</role>
-			</roles>
-		</developer>
-	</developers>
-	<contributors>
-		<contributor>
-			<name>None</name>
-		</contributor>
-	</contributors>
-
-	<mailingLists>
-		<mailingList>
-			<name>ImageJ Forum</name>
-			<archive>http://forum.imagej.net/</archive>
-		</mailingList>
-	</mailingLists>
-
-
-	<scm>
-		<connection>scm:git:git://github.com/CellTrackingChallenge/measures</connection>
-		<developerConnection>scm:git:git://github.com/CellTrackingChallenge/measures</developerConnection>
-		<tag>HEAD</tag>
-		<url>https://github.com/CellTrackingChallenge/measures</url>
-	</scm>
-	<issueManagement>
-		<system>GitHub Issues</system>
-		<url>http://github.com/CellTrackingChallenge/measures/issues</url>
-	</issueManagement>
-	<ciManagement>
-		<system>Travis CI</system>
-		<url>https://travis-ci.com/CellTrackingChallenge/measures</url>
-	</ciManagement>
+	<!-- ====================================== -->
 
 	<properties>
 		<package-name>net.celltrackingchallenge.measures</package-name>
-		<license.licenseName>BSD 2-Clause</license.licenseName>
-		<license.copyrightOwners>xulman</license.copyrightOwners>
-		<license.projectName>CTC-measures</license.projectName>
 
-		<!-- NB: Deploy releases to the SciJava Maven repository. -->
-		<releaseProfiles>deploy-to-scijava</releaseProfiles>
+		<license.licenseName>BSD 2-Clause</license.licenseName>
+		<license.projectName>CTC-measures</license.projectName>
+		<license.organizationName>Cell Tracking Challenge</license.organizationName>
+		<license.copyrightOwners>xulman</license.copyrightOwners>
 	</properties>
 
 	<repositories>
