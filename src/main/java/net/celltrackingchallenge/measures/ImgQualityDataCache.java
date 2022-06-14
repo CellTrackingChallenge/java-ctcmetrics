@@ -723,7 +723,7 @@ public class ImgQualityDataCache
 	                      final String annPath)
 	throws IOException, ImgIOException
 	{
-		//this functions actually only interates over video folders
+		//this functions actually only iterates over video folders
 		//and calls this.calculateVideo() for every folder
 
 		//test and save the given resolution
@@ -784,7 +784,7 @@ public class ImgQualityDataCache
 		while (Files.isReadable(
 			new File(String.format("%s/t%0"+noOfDigits+"d.tif",imgPath,time)).toPath()))
 		{
-			//read the image tripple (raw image, FG labels, BG label)
+			//read the image triple (raw image, FG labels, BG label)
 			Img<?> img
 				= tCache.ReadImage(String.format("%s/t%0"+noOfDigits+"d.tif",imgPath,time));
 
