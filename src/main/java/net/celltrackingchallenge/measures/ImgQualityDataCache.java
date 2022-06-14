@@ -46,6 +46,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import io.scif.img.ImgIOException;
 
 import java.util.Vector;
@@ -729,14 +730,12 @@ public class ImgQualityDataCache
 		//test and save the given resolution
 		setResolution(resolution);
 
-		//single or multiple video situation?
-		if (Files.isReadable(
-			new File(String.format("%s/01/t000.tif",imgPath)).toPath()))
+		//single or multiple (does it contain a "01" subfolder) video situation?
+		if (Files.isDirectory( Paths.get(imgPath,"01") ))
 		{
 			//multiple video situation: paths point on a dataset
 			int video = 1;
-			while (Files.isReadable(
-				new File(String.format("%s/%02d/t000.tif",imgPath,video)).toPath()))
+			while (Files.isDirectory( Paths.get(imgPath,(video > 9 ? String.valueOf(video) : "0"+video)) ))
 			{
 				final videoDataContainer data = new videoDataContainer(video);
 				calculateVideo(String.format("%s/%02d",imgPath,video),
