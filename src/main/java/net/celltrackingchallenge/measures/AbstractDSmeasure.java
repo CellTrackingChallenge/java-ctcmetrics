@@ -32,7 +32,7 @@ import org.scijava.log.LogService;
 import io.scif.img.ImgIOException;
 import java.io.IOException;
 
-public class AbstractDSmeasure
+public abstract class AbstractDSmeasure
 {
 	///shortcuts to some Fiji services
 	protected final LogService log;
@@ -115,10 +115,5 @@ public class AbstractDSmeasure
 		}
 	}
 
-	protected double calculateBottomStage()
-	{
-		//do the bottom stage
-		log.info("Computing the measure bottom part...");
-		return (-1.0);
-	}
+	protected abstract double calculateBottomStage();
 }
