@@ -31,7 +31,30 @@ public class TestMutualFgDistancesOnRealImages {
 		SimplifiedIO.saveImage(img,"/temp/fg_dist_output.tif");
 	}
 
+	static void testThreeCases() {
+		final ImgPlus<? extends RealType<?>> img = SimplifiedIO.openImage("/temp/fg_dist_input.tif");
+
+		final int dim = img.numDimensions();
+		final MutualFgDistances m = new MutualFgDistances(dim);
+
+		m.findAndSaveSurface(6, (ImgPlus)img);
+		m.findAndSaveSurface(8, (ImgPlus)img);
+		m.findAndSaveSurface(24, (ImgPlus)img);
+		m.findAndSaveSurface(10, (ImgPlus)img);
+		m.findAndSaveSurface(12, (ImgPlus)img);
+
+		System.out.println("solving a distance between 10 and 24:");
+		m.setDistance(10,24, m.computeTwoSurfacesDistance(10,24,9) );
+
+		System.out.println("solving a distance between 12 and 24:");
+		m.setDistance(12,24, m.computeTwoSurfacesDistance(12,24,9) );
+
+		System.out.println("best distance 10->24: "+m.getDistance(10,24));
+		System.out.println("best distance 12->24: "+m.getDistance(12,24));
+	}
+
 	public static void main(String[] args) {
-		testOneCase();
+		//testOneCase();
+		testThreeCases();
 	}
 }
