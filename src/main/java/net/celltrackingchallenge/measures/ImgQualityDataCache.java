@@ -31,6 +31,7 @@ import net.celltrackingchallenge.measures.util.MutualFgDistances;
 import net.imglib2.AbstractInterval;
 import net.imglib2.Interval;
 import net.imglib2.Localizable;
+import net.imglib2.loops.LoopBuilder;
 import org.scijava.log.LogService;
 
 import net.imglib2.img.Img;
@@ -47,8 +48,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import io.scif.img.ImgIOException;
+import sc.fiji.simplifiedio.SimplifiedIO;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Vector;
 import java.util.HashSet;
@@ -539,13 +542,30 @@ public class ImgQualityDataCache
 				fgDists.findAndSaveSurface( marker, imgFG,
 						wrapBoxWithInterval(bboxes.get(marker)) );
 
+			//-------------------------------------------------------------------
+			Img<UnsignedShortType> contours = imgFG.copy();
+			LoopBuilder.setImages(contours).forEachPixel(UnsignedShortType::setZero);
+			final int[] pos = new int[contours.numDimensions()];
+			final RandomAccess<UnsignedShortType> ra = contours.randomAccess();
+			for (int marker : bboxes.keySet()) {
+				final Iterator<Integer> pxs = fgDists.getSurfacePixels(marker).iterator();
+				while (pxs.hasNext()) {
+					for (int i = 0; i < pos.length; ++i) pos[i] = pxs.next();
+					ra.setPositionAndGet(pos).setReal(marker);
+				}
+			}
+			SimplifiedIO.saveImage(contours,"/temp/fg_dist_output.tif");
+			//-------------------------------------------------------------------
 
 			//fill the distance matrix
 			for (int markerA : bboxes.keySet())
 				for (int markerB : bboxes.keySet())
 					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
+					{
+						log.info("Distance between "+markerA+" and "+markerB+":");
 						fgDists.setDistance(markerA,markerB,
 								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
+					}
 		}
 
 		rawCursor.reset();
