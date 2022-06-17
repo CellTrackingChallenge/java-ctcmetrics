@@ -563,9 +563,14 @@ public class ImgQualityDataCache
 				//that means: found not-yet-processed FG object
 				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
 
-				if (doDensityPrecalculation)
-					data.nearDistFG.get(time).put( curMarker,
-							fgDists.getDistance(curMarker, fgDists.getClosestNeighbor(curMarker)) );
+				if (doDensityPrecalculation) {
+					int m = fgDists.getClosestNeighbor(curMarker);
+					float d = fgDists.getDistance(curMarker, m);
+					data.nearDistFG.get(time).put(curMarker,d);
+
+					log.trace("Shortest distance between "+curMarker
+							+" and "+m+" is "+d+" pixels");
+				}
 
 				//mark the object (and all its voxels consequently) as processed
 				mDiscovered.add(curMarker);
