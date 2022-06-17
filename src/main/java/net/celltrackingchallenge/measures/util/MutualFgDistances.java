@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class MutualFgDistances {
 
@@ -37,10 +38,84 @@ public class MutualFgDistances {
 	private final long[][] pxsNeigsPattern; //one of the two constants above...
 
 	private final Map<Integer, List<Integer>> surfaceCoordsPerLabel = new HashMap<>(2000);
+	private final Map<SymmetricPair, Float> distMatrixBetweenLabels = new HashMap<>(2000);
+
+	public
+	void resetForSurfaces() {
+		surfaceCoordsPerLabel.clear();
+		distMatrixBetweenLabels.clear();
+	}
 
 	public
 	List<Integer> getSurfacePixels(final int ofThisMarker) {
 		return Collections.unmodifiableList( surfaceCoordsPerLabel.getOrDefault(ofThisMarker, Collections.emptyList()) );
+	}
+
+	public
+	void setDistance(final int firstMarker, final int secondMarker,
+	                 final float dist) {
+		distMatrixBetweenLabels.put(new SymmetricPair(firstMarker,secondMarker), dist);
+	}
+
+	public
+	float getDistance(final int firstMarker, final int secondMarker) {
+		_pair.set(firstMarker,secondMarker);
+		return distMatrixBetweenLabels.getOrDefault(_pair, Float.MAX_VALUE);
+	}
+	private final SymmetricPair _pair = new SymmetricPair(0,0); //only aux variable
+
+	public
+	String printAllDistances() {
+		final StringBuilder sb = new StringBuilder();
+		for (Map.Entry<SymmetricPair,Float> d : distMatrixBetweenLabels.entrySet())
+			sb.append(d.getKey().a)
+					.append(" <-> ")
+					.append(d.getKey().b)
+					.append(" = ")
+					.append(d.getValue())
+					.append(" pixels  [")
+					.append(d.getKey().toString())
+					.append("]\n");
+		return sb.toString();
+	}
+
+	public
+	int getClosestNeighbor(final int ofThisMarker) {
+		int bestMarker = -1;
+		float bestDist = Float.MAX_VALUE;
+		for (Map.Entry<SymmetricPair,Float> c : distMatrixBetweenLabels.entrySet()) {
+			if (c.getKey().a == ofThisMarker && c.getValue() < bestDist) {
+				bestMarker = c.getKey().b;
+				bestDist = c.getValue();
+			}
+			if (c.getKey().b == ofThisMarker && c.getValue() < bestDist) {
+				bestMarker = c.getKey().a;
+				bestDist = c.getValue();
+			}
+		}
+		return bestMarker;
+	}
+
+	static class SymmetricPair {
+		int a,b;
+		SymmetricPair(int _a, int _b) { set(_a,_b); }
+		void set(int _a, int _b) { a = _a; b = _b; }
+		//
+		@Override
+		public boolean equals(Object o) {
+			if (o == this) return true;
+			if (!(o instanceof SymmetricPair)) return false;
+
+			SymmetricPair other = (SymmetricPair)o;
+			if (a == other.a && b == other.b) return true;
+			if (a == other.b && b == other.a) return true;
+			return false;
+		}
+		//
+		@Override
+		public int hashCode() {
+			return Objects.hashCode(a*b);
+		}
 	}
 
 	public <T extends IntegerType<T>>
