@@ -27,6 +27,9 @@
  */
 package net.celltrackingchallenge.measures;
 
+import net.imglib2.AbstractInterval;
+import net.imglib2.Interval;
+import net.imglib2.Localizable;
 import org.scijava.log.LogService;
 
 import net.imglib2.img.Img;
@@ -44,6 +47,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import io.scif.img.ImgIOException;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -188,6 +193,12 @@ public class ImgQualityDataCache
 		public final Vector<HashMap<Integer,Float>> nearDistFG = new Vector<>(1000,100);
 
 		/**
+		 * Stores axis-aligned, 3D bounding box around every discovered FG marker (per each timepoint,
+		 * just like it is the case with most of the attributes around). Pixel coordinates are used.
+		 */
+		public final Vector<Map<Integer,int[]>> boundingBoxesFG = new Vector<>(1000,100);
+
+		/**
 		 * Representation of average & std. deviations of background region.
 		 * There is only one background marker expected in the images.
 		 */
@@ -329,6 +340,62 @@ public class ImgQualityDataCache
 	}
 
 
+	private int[] _location = new int[3];
+	private void assureArrayLengthFor(final int length)
+	{
+		if (_location.length != length) _location = new int[length];
+	}
+	//
+	private int[] createBox(final Localizable loc)
+	{
+		final int D = loc.numDimensions();
+		assureArrayLengthFor(D);
+		//
+		loc.localize(_location);
+		final int[] bbox = new int[D+D];
+		for (int d = 0; d < D; ++d) {
+			bbox[d]   = _location[d];
+			bbox[d+D] = _location[d];
+		}
+		return bbox;
+	}
+	private void extendBox(final int[] bbox, final Localizable loc)
+	{
+		final int D = loc.numDimensions();
+		assureArrayLengthFor(D);
+		//
+		loc.localize(_location);
+		for (int d = 0; d < D; ++d) {
+			bbox[d]   = Math.min(bbox[d],   _location[d]);
+			bbox[d+D] = Math.max(bbox[d+D], _location[d]);
+		}
+	}
+	//
+	private Interval wrapBoxWithInterval(final int[] bbox)
+	{
+		if (_interval.numDimensions() * 2 != bbox.length)
+			_interval = new BboxBackedInterval(bbox);
+		_interval.wrapAroundBbox(bbox);
+		return _interval;
+	}
+	private BboxBackedInterval _interval = new BboxBackedInterval(3);
+	static class BboxBackedInterval extends AbstractInterval {
+		private BboxBackedInterval(final int n) {
+			super(n);
+		}
+		public BboxBackedInterval(final int[] bbox) {
+			super(bbox.length / 2);
+		}
+		public void wrapAroundBbox(final int[] bbox) {
+			final int D = bbox.length / 2;
+			for (int d = 0; d < D; ++d) {
+				min[d] = bbox[d];
+				max[d] = bbox[d+D];
+			}
+		}
+	}
+
+
 	public <T extends RealType<T>>
 	void ClassifyLabels(final int time,
 	                    IterableInterval<T> imgRaw,
@@ -375,6 +442,10 @@ public class ImgQualityDataCache
 		//see extractFGObjectStats() for explanation of this variable
 		double valShift=-1.;
 
+		//bounding boxes
+		final Map<Integer,int[]> bboxes = new HashMap<>(1000);
+		data.boundingBoxesFG.add(bboxes);
+
 		//sweeping variables:
 		final Cursor<T> rawCursor = imgRaw.localizingCursor();
 		final RandomAccess<UnsignedByteType> bgCursor = imgBG.randomAccess();
@@ -408,7 +479,11 @@ public class ImgQualityDataCache
 				}
 			}
 			if (fgCursor.get().getInteger() > 0)
+			{
 				++volFGvoxelCnt; //found FG voxel, update FG stats
+				bboxes.putIfAbsent(fgCursor.get().getInteger(), createBox(rawCursor));
+				extendBox(bboxes.get(fgCursor.get().getInteger()), rawCursor);
+			}
 		}
 
 		//report the "occupancy stats"
@@ -419,6 +494,9 @@ public class ImgQualityDataCache
 		log.info("BG&FG overlapping voxels: "+volFGBGcollisionVoxelCnt+" ( "+100.0*(double)volFGBGcollisionVoxelCnt/imgSize+" %)");
 		final long untouched = imgSize - volFGvoxelCnt - volBGvoxelCnt;
 		log.info("not annotated voxels    : "+untouched+" ( "+100.0*(double)untouched/imgSize+" %)");
+		//
+		for (int marker : bboxes.keySet())
+			log.trace("bbox for marker "+marker+": "+ Arrays.toString(bboxes.get(marker)));
 
 		//finish processing of the BG stats of the current frame
 		if (volBGvoxelCnt > 0)
@@ -442,7 +520,7 @@ public class ImgQualityDataCache
 		//
 		//set to remember already discovered labels
 		//(with initial capacity for 1000 labels)
-		HashSet<Integer> mDiscovered = new HashSet<Integer>(1000);
+		HashSet<Integer> mDiscovered = new HashSet<>(1000);
 
 		//prepare the per-object data structures
 		data.avgFG.add( new HashMap<>() );
@@ -468,8 +546,8 @@ public class ImgQualityDataCache
 				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
 
 				if (doDensityPrecalculation)
-					data.nearDistFG.get(time).put(curMarker,
-						extractObjectDistance(imgFG,curMarker, 50) );
+					data.nearDistFG.get(time).put(curMarker,10.0f);
+						//extractObjectDistance(imgFG,curMarker, 50) );
 
 				//mark the object (and all its voxels consequently) as processed
 				mDiscovered.add(curMarker);
