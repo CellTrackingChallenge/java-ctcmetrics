@@ -219,7 +219,11 @@ public class MutualFgDistances {
 		}
 		bestDist = (float)Math.sqrt(bestDist);
 
+		System.out.println("A @ "+reportCoord(listA,bestIdxA)+" <-> B @ "+reportCoord(listB,bestIdxB)
+				+" is the shortest distance of "+bestDist+" pixels");
+
 		if (noOfStepOverCoords > 0) {
+			System.out.println("but! going for finer... to find:");
 			//do one more finer round... in the vicinity of the best coarsely-discovered points
 			//(this approach has issues!.... e.g., when close to some end of a list...)
 			final int Afrom = Math.max(bestIdxA-(noOfStepOverCoords+1)*dimCnt, 0);
@@ -231,5 +235,10 @@ public class MutualFgDistances {
 		}
 
 		return bestDist;
+	}
+
+	private String reportCoord(final List<Integer> coords, final int idx) {
+		return "["+coords.get(idx)+","+coords.get(idx+1)
+				+ ( dimCnt == 3 ? (","+coords.get(idx+2)+"]") : "]" );
 	}
 }
