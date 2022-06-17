@@ -497,7 +497,7 @@ public class ImgQualityDataCache
 		log.info("not annotated voxels    : "+untouched+" ( "+100.0*(double)untouched/imgSize+" %)");
 		//
 		for (int marker : bboxes.keySet())
-			log.trace("bbox for marker "+marker+": "+ Arrays.toString(bboxes.get(marker)));
+			log.info("bbox for marker "+marker+": "+ Arrays.toString(bboxes.get(marker)));
 
 		//finish processing of the BG stats of the current frame
 		if (volBGvoxelCnt > 0)
