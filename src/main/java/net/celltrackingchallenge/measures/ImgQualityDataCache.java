@@ -27,6 +27,7 @@
  */
 package net.celltrackingchallenge.measures;
 
+import net.celltrackingchallenge.measures.util.MutualFgDistances;
 import net.imglib2.AbstractInterval;
 import net.imglib2.Interval;
 import net.imglib2.Localizable;
@@ -530,6 +531,23 @@ public class ImgQualityDataCache
 		data.overlapFG.add( new HashMap<>() );
 		data.nearDistFG.add( new HashMap<>() );
 
+		final MutualFgDistances fgDists = new MutualFgDistances(imgFG.numDimensions());
+		if (doDensityPrecalculation)
+		{
+			//get all boundary pixels
+			for (int marker : bboxes.keySet())
+				fgDists.findAndSaveSurface( marker, imgFG,
+						wrapBoxWithInterval(bboxes.get(marker)) );
+
+
+			//fill the distance matrix
+			for (int markerA : bboxes.keySet())
+				for (int markerB : bboxes.keySet())
+					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
+						fgDists.setDistance(markerA,markerB,
+								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
+		}
+
 		rawCursor.reset();
 		while (rawCursor.hasNext())
 		{
@@ -546,8 +564,8 @@ public class ImgQualityDataCache
 				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
 
 				if (doDensityPrecalculation)
-					data.nearDistFG.get(time).put(curMarker,10.0f);
-						//extractObjectDistance(imgFG,curMarker, 50) );
+					data.nearDistFG.get(time).put( curMarker,
+							fgDists.getDistance(curMarker, fgDists.getClosestNeighbor(curMarker)) );
 
 				//mark the object (and all its voxels consequently) as processed
 				mDiscovered.add(curMarker);
