@@ -558,14 +558,17 @@ public class ImgQualityDataCache
 			//-------------------------------------------------------------------
 
 			//fill the distance matrix
+			LoopBuilder.setImages(contours).forEachPixel(UnsignedShortType::setZero);
 			for (int markerA : bboxes.keySet())
 				for (int markerB : bboxes.keySet())
 					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
 					{
 						log.info("Distance between "+markerA+" and "+markerB+":");
 						fgDists.setDistance(markerA,markerB,
-								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
+								fgDists.computeTwoSurfacesDistance(fgDists.getSurfacePixels(markerA),
+										fgDists.getSurfacePixels(markerB), 9, ra,markerA,markerB) );
 					}
+			SimplifiedIO.saveImage(contours,"/temp/fg_dist_output2.tif");
 		}
 
 		rawCursor.reset();

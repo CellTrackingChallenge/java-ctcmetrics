@@ -1,8 +1,10 @@
 package net.celltrackingchallenge.measures.util;
 
 import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.view.Views;
 import net.imglib2.view.IntervalView;
 import net.imglib2.Interval;
@@ -176,12 +178,15 @@ public class MutualFgDistances {
 		if (listA == null || listB == null)
 			return Float.MAX_VALUE;
 
-		return computeTwoSurfacesDistance(listA, listB, noOfStepOverCoords);
+		//return computeTwoSurfacesDistance(listA, listB, noOfStepOverCoords);
+		return 0;
 	}
 
 	public
 	float computeTwoSurfacesDistance(final List<Integer> listA, final List<Integer> listB,
-	                                 final int noOfStepOverCoords) {
+	                                 final int noOfStepOverCoords,
+	                                 final RandomAccess<UnsignedShortType> ra,
+	                                 final int markerA, final int markerB) {
 
 		final boolean do3D = dimCnt == 3;
 		final int skipCnt = dimCnt * noOfStepOverCoords;
@@ -195,12 +200,16 @@ public class MutualFgDistances {
 			int xA = itA.next();
 			int yA = itA.next();
 			int zA = do3D ? itA.next() : 0;
+			if (do3D) ra.setPositionAndGet(xA,yA,zA).set(markerA);
+			else ra.setPositionAndGet(xA,yA).set(markerA);
 
 			for (ListIterator<Integer> itB = listB.listIterator(); itB.hasNext(); )
 			{
 				int xB = itB.next();
 				int yB = itB.next();
 				int zB = do3D ? itB.next() : 0;
+				if (do3D) ra.setPositionAndGet(xB,yB,zB).set(markerB);
+				else ra.setPositionAndGet(xB,yB).set(markerB);
 
 				float currDist = (xA-xB)*(xA-xB);
 				currDist += (yA-yB)*(yA-yB);
@@ -230,7 +239,7 @@ public class MutualFgDistances {
 			final int Ato   = Math.min(bestIdxA+(noOfStepOverCoords-1)*dimCnt, listA.size()-1);
 			final int Bfrom = Math.max(bestIdxB-(noOfStepOverCoords+1)*dimCnt, 0);
 			final int Bto   = Math.min(bestIdxB+(noOfStepOverCoords-1)*dimCnt, listB.size()-1);
-			float finerDist = computeTwoSurfacesDistance(listA.subList(Afrom,Ato), listB.subList(Bfrom,Bto), 0);
+			float finerDist = computeTwoSurfacesDistance(listA.subList(Afrom,Ato), listB.subList(Bfrom,Bto), 0, ra,markerA,markerB);
 			if (finerDist < bestDist) bestDist = finerDist;
 		}
 
