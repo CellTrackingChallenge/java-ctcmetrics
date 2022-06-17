@@ -30,18 +30,13 @@ package net.celltrackingchallenge.measures;
 import org.scijava.log.LogService;
 
 import net.imglib2.img.Img;
-import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.view.Views;
-import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
-import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
 
 import java.io.File;
 import java.io.IOException;
@@ -138,16 +133,6 @@ public class ImgQualityDataCache
 		for (int n=0; n < resolution.length; ++n)
 			resolution[n] = _res[n];
 	}
-
-	//"time savers" to prevent allocating it over and over again:
-	//for extractObjectDistance(), for storing coordinates
-	private int[] pos = null;
-	private int[] box = null;
-	//for extractObjectDistance(), only for isotropic boxes 3x3x...x3
-	private float[] boxDistances = null;
-	//for extractObjectDistance(), for calculating distance tranforms per object
-	Img<FloatType> dilIgA = null;
-	Img<FloatType> dilIgB = null;
 
 	/**
 	 * This class holds all relevant data that are a) needed for individual
@@ -341,221 +326,6 @@ public class ImgQualityDataCache
 		}
 
 		return(count);
-	}
-
-
-	/**
-	 * The \e curMarker represents the marker whose distance to nearest
-	 * neighbor is to be calculated.
-	 *
-	 * It dilates (with 3x3x... SE) until it hits some other marker and returns Chamfer
-	 * distance to that marker. The iterations (number of dilations) are however limited
-	 * with \e maxIters.
-	 */
-	private <T extends IntegerType<T>>
-	float extractObjectDistance(final Img<T> img, final int curMarker,
-	                            final int maxIters)
-	{
-		//overlay over the original input image with special marker boundary
-		T specialBorderMarker = img.firstElement().createVariable();
-		specialBorderMarker.setInteger(-1);
-		final int borderMarker = specialBorderMarker.getInteger(); //short-cut...
-
-		ExtendedRandomAccessibleInterval<T,Img<T>> extImg
-			= Views.extendValue(img, specialBorderMarker);
-
-		//working (float-type) "copies" of the input image
-		if (dilIgA == null || dilIgB == null)
-			throw new IllegalArgumentException("Internal error in extractFGObjectStats(), sorry.");
-		//could also check for proper size of the two images vs. img...
-
-		//overlays over the working copies with extended boundary
-		ExtendedRandomAccessibleInterval<FloatType,Img<FloatType>> dilImgA
-			= Views.extendValue(dilIgA, new FloatType());
-		ExtendedRandomAccessibleInterval<FloatType,Img<FloatType>> dilImgB
-			= Views.extendValue(dilIgB, new FloatType());
-
-		//setup necessary pointers for the tmp images
-		final Cursor<FloatType> sweepCursorA = dilIgA.localizingCursor();
-		final Cursor<FloatType> sweepCursorB = dilIgB.localizingCursor();
-		final RandomAccess<FloatType> outCursorA = dilImgA.randomAccess();
-		final RandomAccess<FloatType> outCursorB = dilImgB.randomAccess();
-
-		//prepare the initial working image
-		Cursor<T> imgCursor = img.localizingCursor();
-		RandomAccess<FloatType> outCursor = outCursorA;
-		int tmp;
-		while (imgCursor.hasNext())
-		{
-			tmp = imgCursor.next().getInteger();
-			outCursor.setPosition(imgCursor);
-			//make sure all voxels are initiated
-			outCursor.get().setReal( tmp == curMarker ? 1.f : 0.f );
-		}
-		imgCursor = null;
-
-		//clear the second temp image
-		while (sweepCursorB.hasNext())
-			sweepCursorB.next().setReal(0.f);
-
-		//current working cursors: "sweep" scans the input image, "out" checks the input image
-		boolean AisInput = true;
-		Cursor<FloatType> sweepCursor = sweepCursorA;
-		outCursor = outCursorB;
-		RandomAccess<T> inCursor = extImg.randomAccess();
-
-		boolean hasHit = false;
-		//DEBUG//int closestMarker = 0;
-		float closestDist = Float.MAX_VALUE;
-
-		int iters=0;
-		do
-		{
-			//dilate and check if we are running into somebody
-			//NB: always finish the whole round!
-			sweepCursor.reset();
-			while (sweepCursor.hasNext())
-			{
-				//currently observed distance at the currently examined voxel
-				float curDist = sweepCursor.next().getRealFloat();
-
-				//check we are over "any already touched" voxel:
-				//NB: should be faster than checking if our voxel is a neighbor to "any touched" voxel
-				if (curDist > 0.f)
-				{
-					sweepCursor.localize(pos);
-					//reportCoordinate("found marker "+curMarker+" at: ");
-
-					//BOX STRUCTURING ELEMENT -- APPROXIMATES L2 DISTANCES (Eucledian metric)
-
-					//now check its neighbors..., and update hasHit possibly
-					//NB: always finish the whole round!
-					sweepBox(true); //true means "do init"
-					do
-					{
-						inCursor.setPosition(pos);
-						outCursor.setPosition(pos);
-
-						//First, update the distance value at the current "neighbor" voxel:
-						//so far best distance stored in the output voxel
-						final float neigDist = outCursor.get().getRealFloat();
-
-						//update distance for the current inside-box position
-						/*
-						float offsetDist = 0;
-						for (int i=0; i < box.length; ++i)
-							offsetDist += (float)box[i]*(float)box[i];
-						offsetDist = (float)Math.sqrt(offsetDist);
-						*/
-
-						//NB: this works only for isotropic boxes 3x3x...x3
-						int nonZeroAxesCnt = 0;
-						for (int i=0; i < box.length; ++i)
-							nonZeroAxesCnt += box[i]&1;
-						final float offsetDist = boxDistances[nonZeroAxesCnt];
-
-						//first condition: is there any distance stored already?
-						//second condition: would a move from the current position
-						//improve currently saved distance in the output voxel?
-						if (neigDist == 0. || neigDist > curDist+offsetDist)
-							outCursor.get().setReal(curDist+offsetDist);
-
-						//Second, check we haven't run into another object (marker)
-						int examinedMarker = inCursor.get().getInteger();
-						if (examinedMarker > 0 && examinedMarker != curMarker && examinedMarker != borderMarker)
-						{
-							hasHit = true;
-							curDist = outCursor.get().getRealFloat(); //get fresh distance value
-							//reportCoordinate(curMarker+" found his neighbor "+examinedMarker+" at distance "+curDist+" at: ");
-
-							if (curDist < closestDist)
-							{
-								closestDist = curDist;
-								//DEBUG//closestMarker = examinedMarker;
-							}
-						}
-					}
-					while (sweepBox(false));
-				} //over "already discovered" voxel
-			} //input image sweeping
-
-			//flip the intput/output image sense
-			if (AisInput)
-			{
-				//make B input
-				sweepCursor = sweepCursorB;
-				outCursor = outCursorA;
-				AisInput=false;
-			}
-			else
-			{
-				//make A input
-				sweepCursor = sweepCursorA;
-				outCursor = outCursorB;
-				AisInput=true;
-			}
-
-			//calculates truly a number of iterations (for now)
-			++iters;
-		}
-		while (!hasHit && iters < maxIters);
-
-		//set up the return values
-		if (hasHit)
-		{
-			//objDistance.otherMarker = closestMarker;
-			//objDistance.distance = closestDist;
-			//DEBUG//log.info(curMarker+" found his neighbor "+closestMarker+" at distance "+closestDist+" isotropic voxels.");
-			return (closestDist);
-		}
-		else
-		{
-			//objDistance.otherMarker = -1;
-			//objDistance.distance = (float)maxIters;
-			//DEBUG//log.info(curMarker+" has not found his neighbor with in "+maxIters+" iterations.");
-			return ((float)maxIters);
-		}
-	}
-
-	private boolean sweepBox(final boolean init)
-	{
-		if (init == true)
-		{
-			for (int i=0; i < box.length; ++i)
-			{
-				box[i]=-1;
-				--pos[i];
-			}
-			return (true);
-		}
-		else
-		{
-			int index=box.length-1;
-			while (index >= 0)
-			{
-				++box[index];
-				++pos[index];
-				if (box[index] == 2)
-				{
-					box[index]=-1;
-					pos[index]-=3;
-					--index;
-				}
-				else return (true);
-			}
-		}
-		return (false);
-	}
-
-
-	///reports coordinate stored in the internal attribute this.pos[]
-	@SuppressWarnings("unused")
-	private void reportCoordinate(final String msg)
-	{
-		if (pos.length == 3)
-			System.out.println(msg+"("+pos[0]+","+pos[1]+","+pos[2]+")");
-		else
-			System.out.println(msg+"("+pos[0]+","+pos[1]+")");
 	}
 
 
@@ -792,33 +562,6 @@ public class ImgQualityDataCache
 
 			Img<UnsignedByteType> imgBG
 				= tCache.ReadImageG8(String.format("%s/BG/mask%0"+noOfDigits+"d.tif",annPath,time));
-
-			//time to allocate helper variables?
-			if (time == 0)
-			{
-				//positions and box sweeping:
-				pos = new int[imgFG.numDimensions()];
-				box = new int[imgFG.numDimensions()];
-
-				//pre-calculating distances with box (any box point from box centre)
-				//based on how many non-zero elements is available in a vector
-				//that points at any box point
-				//NB: hard-fixed for up to 10-dimensional image
-				//NB: this works only for isotropic boxes 3x3x...x3
-				boxDistances = new float[10];
-				for (int i=1; i < 10; ++i)
-					boxDistances[i] = (float)Math.sqrt((double)i);
-
-				//creating tmp images of the right size:
-				int[] dims = new int[imgFG.numDimensions()];
-				for (int n=0; n < imgFG.numDimensions(); ++n)
-					dims[n] = (int)imgFG.dimension(n);
-				ArrayImgFactory<FloatType> imgFactory = new ArrayImgFactory<>(new FloatType());
-				dilIgA = imgFactory.create(dims);
-				dilIgB = imgFactory.create(dims);
-				dims = null;
-				imgFactory = null;
-			}
 
 			ClassifyLabels(time, (IterableInterval)img, imgBG, imgFG, imgFGprev, data);
 
