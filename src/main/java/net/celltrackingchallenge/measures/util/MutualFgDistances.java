@@ -9,6 +9,7 @@ import net.imglib2.Interval;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -159,5 +160,76 @@ public class MutualFgDistances {
 				//System.out.println(Arrays.toString(_location));
 			}
 		}
+	}
+
+	public
+	float computeTwoSurfacesDistance(final int markerA, final int markerB) {
+		return computeTwoSurfacesDistance(markerA, markerB, 0);
+	}
+
+	public
+	float computeTwoSurfacesDistance(final int markerA, final int markerB,
+	                                 final int noOfStepOverCoords) {
+
+		final List<Integer> listA = surfaceCoordsPerLabel.getOrDefault(markerA, null);
+		final List<Integer> listB = surfaceCoordsPerLabel.getOrDefault(markerB, null);
+		if (listA == null || listB == null)
+			return Float.MAX_VALUE;
+
+		return computeTwoSurfacesDistance(listA, listB, noOfStepOverCoords);
+	}
+
+	public
+	float computeTwoSurfacesDistance(final List<Integer> listA, final List<Integer> listB,
+	                                 final int noOfStepOverCoords) {
+
+		final boolean do3D = dimCnt == 3;
+		final int skipCnt = dimCnt * noOfStepOverCoords;
+
+		float bestDist = Float.MAX_VALUE;
+		int bestIdxA = -1;
+		int bestIdxB = -1;
+
+		for (ListIterator<Integer> itA = listA.listIterator(); itA.hasNext(); )
+		{
+			int xA = itA.next();
+			int yA = itA.next();
+			int zA = do3D ? itA.next() : 0;
+
+			for (ListIterator<Integer> itB = listB.listIterator(); itB.hasNext(); )
+			{
+				int xB = itB.next();
+				int yB = itB.next();
+				int zB = do3D ? itB.next() : 0;
+
+				float currDist = (xA-xB)*(xA-xB);
+				currDist += (yA-yB)*(yA-yB);
+				currDist += (zA-zB)*(zA-zB);
+
+				if (currDist < bestDist) {
+					bestDist = currDist;
+					bestIdxA = itA.nextIndex()-dimCnt;
+					bestIdxB = itB.nextIndex()-dimCnt;
+				}
+
+				for (int s = 0; s < skipCnt && itB.hasNext(); ++s) itB.next();
+			}
+
+			for (int s = 0; s < skipCnt && itA.hasNext(); ++s) itA.next();
+		}
+		bestDist = (float)Math.sqrt(bestDist);
+
+		if (noOfStepOverCoords > 0) {
+			//do one more finer round... in the vicinity of the best coarsely-discovered points
+			//(this approach has issues!.... e.g., when close to some end of a list...)
+			final int Afrom = Math.max(bestIdxA-(noOfStepOverCoords+1)*dimCnt, 0);
+			final int Ato   = Math.min(bestIdxA+(noOfStepOverCoords-1)*dimCnt, listA.size()-1);
+			final int Bfrom = Math.max(bestIdxB-(noOfStepOverCoords+1)*dimCnt, 0);
+			final int Bto   = Math.min(bestIdxB+(noOfStepOverCoords-1)*dimCnt, listB.size()-1);
+			float finerDist = computeTwoSurfacesDistance(listA.subList(Afrom,Ato), listB.subList(Bfrom,Bto), 0);
+			if (finerDist < bestDist) bestDist = finerDist;
+		}
+
+		return bestDist;
 	}
 }
