@@ -28,9 +28,16 @@
 package net.celltrackingchallenge.measures;
 
 import net.celltrackingchallenge.measures.util.MutualFgDistances;
+import net.imagej.mesh.Mesh;
+import net.imagej.mesh.Vertices;
+import net.imagej.ops.OpService;
 import net.imglib2.AbstractInterval;
 import net.imglib2.Interval;
 import net.imglib2.Localizable;
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.roi.geom.real.DefaultWritablePolygon2D;
+import net.imglib2.roi.geom.real.Polygon2D;
+import net.imglib2.type.logic.BitType;
 import org.scijava.log.LogService;
 
 import net.imglib2.img.Img;
@@ -175,8 +182,8 @@ public class ImgQualityDataCache
 			return (v);
 		}
 
-		/// Stores REAL SURFACE (in square micrometers) of the FG masks at time points.
-		public final Vector<HashMap<Integer,Double>> surfaceFG = new Vector<>(1000,100);
+		/// Stores the circularity (for 2D data) or sphericity (for 3D data)
+		public final Vector<HashMap<Integer,Double>> shaValuesFG = new Vector<>(1000,100);
 
 		/**
 		 * Stores how many voxels are there in the intersection of masks of the same
@@ -284,15 +291,75 @@ public class ImgQualityDataCache
 		//voxel count
 		data.volumeFG.get(time).put(marker, vxlCnt );
 
-		//call dedicated function to calculate surface in real coordinates,
-		//the real area/surface
-		if (doShapePrecalculation)
-			data.surfaceFG.get(time).put(marker, 999.9 ); //TODO replace 999 with some function call
-
 		//also process the "overlap feature" (if the object was found in the previous frame)
 		if (time > 0 && data.volumeFG.get(time-1).get(marker) != null)
 			data.overlapFG.get(time).put(marker,
 				measureObjectsOverlap(imgPosition,imgFGcurrent, marker,imgFGprevious) );
+	}
+
+
+	private
+	double computeSphericity(final int fgValue,
+	                         final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
+	                         final RandomAccessibleInterval<BitType> imgTmpSharedStorage)
+	{
+		OpService ops = log.getContext().getService(OpService.class);
+		if (ops == null)
+			throw new RuntimeException("computeSphericity() is missing the Ops service in its context, sorry.");
+
+		//extract the FG mask into separate binary image
+		LoopBuilder.setImages(imgFGcurrent, imgTmpSharedStorage)
+				.forEachPixel((s, t) -> {
+					if (s.getInteger() == fgValue) t.setOne();
+					else t.setZero();
+				});
+
+		final Mesh m = ops.geom().marchingCubes(imgTmpSharedStorage);
+
+		//apply resolution correction
+		final Vertices mv = m.vertices();
+		for (int cnt = 0; cnt < mv.size(); ++cnt) {
+			mv.setPosition(cnt, resolution[0]*mv.x(cnt), resolution[1]*mv.y(cnt), resolution[2]*mv.z(cnt) );
+		}
+
+		//System.out.println("      size: "+ops.geom().size(m));
+		//System.out.println("   surface: "+ops.geom().boundarySize(m));
+		return ops.geom().sphericity(m).getRealDouble();
+	}
+
+	private
+	double computeCircularity(final int fgValue,
+	                          final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
+	                          final RandomAccessibleInterval<BitType> imgTmpSharedStorage)
+	{
+		OpService ops = log.getContext().getService(OpService.class);
+		if (ops == null)
+			throw new RuntimeException("computeCircularity() is missing the Ops service in its context, sorry.");
+
+		//extract the FG mask into separate binary image
+		LoopBuilder.setImages(imgFGcurrent, imgTmpSharedStorage)
+				.forEachPixel((s, t) -> {
+					if (s.getInteger() == fgValue) t.setOne();
+					else t.setZero();
+				});
+
+		Polygon2D p = ops.geom().contour(imgTmpSharedStorage, true);
+		if (p.numDimensions() != 2)
+			throw new RuntimeException("computeCircularity() failed extracting 2D polygon, sorry.");
+
+		//apply resolution correction
+		if (resolution[0] != 1.0 || resolution[1] != 1.0) {
+			log.info("Applying 2D resolution correction for SHA measure: "+resolution);
+			final double[] x = new double[p.numVertices()];
+			final double[] y = new double[p.numVertices()];
+			for (int cnt = 0; cnt < p.numVertices(); ++cnt) {
+				x[cnt] = resolution[0] * p.vertices().get(cnt).getDoublePosition(0);
+				y[cnt] = resolution[1] * p.vertices().get(cnt).getDoublePosition(1);
+			}
+			p = new DefaultWritablePolygon2D(x,y);
+		}
+
+		return ops.geom().circularity(p).getRealDouble();
 	}
 
 
@@ -527,7 +594,7 @@ public class ImgQualityDataCache
 		data.avgFG.add( new HashMap<>() );
 		data.stdFG.add( new HashMap<>() );
 		data.volumeFG.add( new HashMap<>() );
-		data.surfaceFG.add( new HashMap<>() );
+		data.shaValuesFG.add( new HashMap<>() );
 		data.overlapFG.add( new HashMap<>() );
 		data.nearDistFG.add( new HashMap<>() );
 
@@ -539,7 +606,6 @@ public class ImgQualityDataCache
 				fgDists.findAndSaveSurface( marker, imgFG,
 						wrapBoxWithInterval(bboxes.get(marker)) );
 
-
 			//fill the distance matrix
 			for (int markerA : bboxes.keySet())
 				for (int markerB : bboxes.keySet())
@@ -547,6 +613,10 @@ public class ImgQualityDataCache
 						fgDists.setDistance(markerA,markerB,
 								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
 		}
+
+		final Img<BitType> fgBinaryTmp = doShapePrecalculation ?
+				imgFG.factory().imgFactory(new BitType()).create(imgFG) : null;
+		final boolean doSphericity = imgFG.numDimensions() == 3;
 
 		rawCursor.reset();
 		while (rawCursor.hasNext())
@@ -559,9 +629,13 @@ public class ImgQualityDataCache
 			final int curMarker = fgCursor.get().getInteger();
 			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
 			{
-				//found not-yet-processed FG voxel,
-				//that means: found not-yet-processed FG object
+				//found not-yet-processed FG object
 				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
+
+				if (doShapePrecalculation)
+					data.shaValuesFG.get(time).put( curMarker,
+							doSphericity ? computeSphericity(curMarker,imgFG,fgBinaryTmp)
+									: computeCircularity(curMarker,imgFG,fgBinaryTmp) );
 
 				if (doDensityPrecalculation)
 					data.nearDistFG.get(time).put( curMarker,

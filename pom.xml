@@ -161,5 +161,12 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<!-- for meshes -->
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej-ops</artifactId>
+			<version>${imagej-ops.version}</version>
+		</dependency>
 	</dependencies>
 </project>
