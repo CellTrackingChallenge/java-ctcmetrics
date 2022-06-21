@@ -223,9 +223,9 @@ public class MutualFgDistances {
 			//do one more finer round... in the vicinity of the best coarsely-discovered points
 			//(this approach has issues!.... e.g., when close to some end of a list...)
 			final int Afrom = Math.max(bestIdxA-(noOfStepOverCoords+1)*dimCnt, 0);
-			final int Ato   = Math.min(bestIdxA+(noOfStepOverCoords-1)*dimCnt, listA.size()-1);
+			final int Ato   = Math.min(bestIdxA+(noOfStepOverCoords-1)*dimCnt, listA.size()-dimCnt);
 			final int Bfrom = Math.max(bestIdxB-(noOfStepOverCoords+1)*dimCnt, 0);
-			final int Bto   = Math.min(bestIdxB+(noOfStepOverCoords-1)*dimCnt, listB.size()-1);
+			final int Bto   = Math.min(bestIdxB+(noOfStepOverCoords-1)*dimCnt, listB.size()-dimCnt);
 			float finerDist = computeTwoSurfacesDistance(listA.subList(Afrom,Ato), listB.subList(Bfrom,Bto), 0);
 			if (finerDist < bestDist) bestDist = finerDist;
 		}
