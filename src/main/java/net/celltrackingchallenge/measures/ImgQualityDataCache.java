@@ -324,6 +324,7 @@ public class ImgQualityDataCache
 
 		//System.out.println("      size: "+ops.geom().size(m));
 		//System.out.println("   surface: "+ops.geom().boundarySize(m));
+		log.info("Sphericity of a marker "+fgValue+" is "+ops.geom().sphericity(m).getRealDouble());
 		return ops.geom().sphericity(m).getRealDouble();
 	}
 
@@ -359,6 +360,7 @@ public class ImgQualityDataCache
 			p = new DefaultWritablePolygon2D(x,y);
 		}
 
+		log.info("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
 		return ops.geom().circularity(p).getRealDouble();
 	}
 
@@ -603,15 +605,21 @@ public class ImgQualityDataCache
 		{
 			//get all boundary pixels
 			for (int marker : bboxes.keySet())
+			{
+				log.info("Discovering surface for a marker "+marker);
 				fgDists.findAndSaveSurface( marker, imgFG,
 						wrapBoxWithInterval(bboxes.get(marker)) );
+			}
 
 			//fill the distance matrix
 			for (int markerA : bboxes.keySet())
 				for (int markerB : bboxes.keySet())
 					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
+					{
+						log.info("Computing distance between markers "+markerA+" and "+markerB);
 						fgDists.setDistance(markerA,markerB,
 								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
+					}
 		}
 
 		final Img<BitType> fgBinaryTmp = doShapePrecalculation ?
