@@ -27,29 +27,39 @@
  */
 package net.celltrackingchallenge.measures;
 
-import org.scijava.log.LogService;
+import net.celltrackingchallenge.measures.util.MutualFgDistances;
+import net.imagej.mesh.Mesh;
+import net.imagej.mesh.Vertices;
+import net.imagej.ops.OpService;
+import net.imglib2.AbstractInterval;
+import net.imglib2.Interval;
+import net.imglib2.Localizable;
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.roi.geom.real.DefaultWritablePolygon2D;
+import net.imglib2.roi.geom.real.Polygon2D;
+import net.imglib2.type.logic.BitType;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.Views;
+import org.scijava.log.Logger;
 
 import net.imglib2.img.Img;
-import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.view.Views;
-import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
-import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import io.scif.img.ImgIOException;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Vector;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
@@ -57,7 +67,8 @@ import java.util.LinkedList;
 public class ImgQualityDataCache
 {
 	///shortcuts to some Fiji services
-	private final LogService log;
+	private Logger log;
+	OpService ops;
 
 	/**
 	 * flag to notify ClassifyLabels() if to call extractObjectDistance()
@@ -71,13 +82,16 @@ public class ImgQualityDataCache
 	public int noOfDigits = 3;
 
 	///a constructor requiring connection to Fiji report/log services
-	public ImgQualityDataCache(final LogService _log)
+	public ImgQualityDataCache(final Logger _log, final OpService _ops)
 	{
 		//check that non-null was given for _log!
 		if (_log == null)
 			throw new NullPointerException("No log service supplied.");
-
 		log = _log;
+
+		if (_ops == null)
+			log.warn("OpService not provided, some measures may not be functional...");
+		ops = _ops;
 	}
 
 	/**
@@ -86,20 +100,28 @@ public class ImgQualityDataCache
 	 * given in the foreign \e _cache; \e _cache can be null and then
 	 * nothing is preserved
 	 */
-	public ImgQualityDataCache(final LogService _log, final ImgQualityDataCache _cache)
+	public ImgQualityDataCache(final Logger _log, final ImgQualityDataCache _cache)
 	{
-		//check that non-null was given for _log!
-		if (_log == null)
-			throw new NullPointerException("No log service supplied.");
-
-		log = _log;
+		this(_log, _cache != null ? _cache.ops : null);
+		//NB: reuse ops from the given _cache, if there is some...
 
 		if (_cache != null)
 		{
 			//preserve the feature flags
 			doDensityPrecalculation = _cache.doDensityPrecalculation;
 			doShapePrecalculation   = _cache.doShapePrecalculation;
+			noOfDigits = _cache.noOfDigits;
 		}
+		else
+		{
+			log.warn("Couldn't provide OpService because no cache was given.");
+		}
+	}
+
+	public
+	void provideOpService(final OpService _ops)
+	{
+		ops = _ops;
 	}
 
 	///GT and RES paths combination for which this cache is valid, null means invalid
@@ -112,7 +134,7 @@ public class ImgQualityDataCache
 	{
 		return ( imgPath != null &&  annPath != null
 		     && _imgPath != null && _annPath != null
-		     && imgPath == _imgPath
+		     && imgPath == _imgPath //intentional match on reference (and on the content)
 		     && annPath == _annPath);
 	}
 
@@ -137,16 +159,6 @@ public class ImgQualityDataCache
 		for (int n=0; n < resolution.length; ++n)
 			resolution[n] = _res[n];
 	}
-
-	//"time savers" to prevent allocating it over and over again:
-	//for extractObjectDistance(), for storing coordinates
-	private int[] pos = null;
-	private int[] box = null;
-	//for extractObjectDistance(), only for isotropic boxes 3x3x...x3
-	private float[] boxDistances = null;
-	//for extractObjectDistance(), for calculating distance tranforms per object
-	Img<FloatType> dilIgA = null;
-	Img<FloatType> dilIgB = null;
 
 	/**
 	 * This class holds all relevant data that are a) needed for individual
@@ -183,8 +195,8 @@ public class ImgQualityDataCache
 			return (v);
 		}
 
-		/// Stores REAL SURFACE (in square micrometers) of the FG masks at time points.
-		public final Vector<HashMap<Integer,Double>> surfaceFG = new Vector<>(1000,100);
+		/// Stores the circularity (for 2D data) or sphericity (for 3D data)
+		public final Vector<HashMap<Integer,Double>> shaValuesFG = new Vector<>(1000,100);
 
 		/**
 		 * Stores how many voxels are there in the intersection of masks of the same
@@ -200,6 +212,12 @@ public class ImgQualityDataCache
 		 * of the image is not taken into account.
 		 */
 		public final Vector<HashMap<Integer,Float>> nearDistFG = new Vector<>(1000,100);
+
+		/**
+		 * Stores axis-aligned, 3D bounding box around every discovered FG marker (per each timepoint,
+		 * just like it is the case with most of the attributes around). Pixel coordinates are used.
+		 */
+		public final Vector<Map<Integer,int[]>> boundingBoxesFG = new Vector<>(1000,100);
 
 		/**
 		 * Representation of average & std. deviations of background region.
@@ -224,18 +242,26 @@ public class ImgQualityDataCache
 	 * This function pushes into global data at the specific \e time .
 	 */
 	private <T extends RealType<T>>
-	void extractFGObjectStats(final Cursor<T> imgPosition, final int time, //who: "object" @ time
-		final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent,     //where: input masks
-		final RandomAccessibleInterval<UnsignedShortType> imgFGprevious,
-		final videoDataContainer data)
+	void extractFGObjectStats(final int marker,
+		final IterableInterval<T> iRaw,
+		final RandomAccessibleInterval<UnsignedShortType> iFgCurr,     //where: input masks
+		final RandomAccessibleInterval<UnsignedShortType> iFgPrev,
+		final videoDataContainer data, final int time)
 	{
 		//working pointers into the mask images
-		final RandomAccess<UnsignedShortType> fgCursor = imgFGcurrent.randomAccess();
+		final Cursor<T> rawCursor = iRaw.localizingCursor();
+		final RandomAccess<UnsignedShortType> fgCursor = iFgCurr.randomAccess();
 
-		//obtain the ID of the processed object
-		//NB: imgPosition points already at sure existing voxel
-		fgCursor.setPosition(imgPosition);
-		final int marker = fgCursor.get().getInteger();
+		//advance until over 'marker' object/pixel
+		while (rawCursor.hasNext()) {
+			rawCursor.next();
+			if (fgCursor.setPositionAndGet(rawCursor).getInteger() == marker) break;
+		}
+		if (fgCursor.get().getInteger() != marker)
+			throw new RuntimeException("Inconsistency when seeking marker "+marker);
+		//NB: the first voxel with 'marker' is now discovered; since we will
+		//    continue sweeping the image from the next voxel, we will already
+		//    count-in this current voxel -> thus, vxlCnt = 1
 
 		//init aux variables:
 		double intSum = 0.; //for single-pass calculation of mean and variance
@@ -244,16 +270,13 @@ public class ImgQualityDataCache
 		//to fight against numerical issues we introduce a "value shifter",
 		//which we can already initiate with an "estimate of mean" which we
 		//derive from the object's first spotted voxel value
-		//NB: imgPosition points already at sure existing voxel
-		final double valShift=imgPosition.get().getRealDouble();
+		//NB: rawCursor points already at sure existing voxel
+		final double valShift=rawCursor.get().getRealDouble();
 
 		//the voxel counter (for volume)
-		long vxlCnt = 0L;
+		long vxlCnt = 1L;
 
-		//working copy of the input cursor, this one drives the image sweeping
-		//sweep the image and search for this object/marker
-		final Cursor<T> rawCursor = imgPosition.copyCursor();
-		rawCursor.reset();
+		//continue sweeping the image while searching further for this object/marker
 		while (rawCursor.hasNext())
 		{
 			rawCursor.next();
@@ -286,281 +309,155 @@ public class ImgQualityDataCache
 		//voxel count
 		data.volumeFG.get(time).put(marker, vxlCnt );
 
-		//call dedicated function to calculate surface in real coordinates,
-		//the real area/surface
-		if (doShapePrecalculation)
-			data.surfaceFG.get(time).put(marker, 999.9 ); //TODO replace 999 with some function call
-
 		//also process the "overlap feature" (if the object was found in the previous frame)
 		if (time > 0 && data.volumeFG.get(time-1).get(marker) != null)
 			data.overlapFG.get(time).put(marker,
-				measureObjectsOverlap(imgPosition,imgFGcurrent, marker,imgFGprevious) );
+				measureObjectsOverlap(marker,iFgCurr,iFgPrev) );
+	}
+
+
+	private
+	double computeSphericity(final int fgValue,
+	                         final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
+	                         final RandomAccessibleInterval<BitType> imgTmpSharedStorage)
+	{
+		if (ops == null)
+			throw new RuntimeException("computeSphericity() is missing the Ops service in its context, sorry.");
+
+		//extract the FG mask into separate binary image
+		LoopBuilder.setImages(imgFGcurrent, imgTmpSharedStorage)
+				.forEachPixel((s, t) -> {
+					if (s.getInteger() == fgValue) t.setOne();
+					else t.setZero();
+				});
+
+		final Mesh m = ops.geom().marchingCubes(imgTmpSharedStorage);
+
+		//apply resolution correction
+		final Vertices mv = m.vertices();
+		for (int cnt = 0; cnt < mv.size(); ++cnt) {
+			mv.setPosition(cnt, resolution[0]*mv.x(cnt), resolution[1]*mv.y(cnt), resolution[2]*mv.z(cnt) );
+		}
+
+		log.trace("marker "+fgValue+" volume is "+ops.geom().size(m));
+		log.trace("marker "+fgValue+" surface is "+ops.geom().boundarySize(m));
+		log.debug("Sphericity of a marker "+fgValue+" is "+ops.geom().sphericity(m).getRealDouble());
+		return ops.geom().sphericity(m).getRealDouble();
+	}
+
+	private
+	double computeCircularity(final int fgValue,
+	                          final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
+	                          final RandomAccessibleInterval<BitType> imgTmpSharedStorage)
+	{
+		if (ops == null)
+			throw new RuntimeException("computeCircularity() is missing the Ops service in its context, sorry.");
+
+		//extract the FG mask into separate binary image
+		LoopBuilder.setImages(imgFGcurrent, imgTmpSharedStorage)
+				.forEachPixel((s, t) -> {
+					if (s.getInteger() == fgValue) t.setOne();
+					else t.setZero();
+				});
+
+		Polygon2D p = ops.geom().contour(imgTmpSharedStorage, true);
+		if (p.numDimensions() != 2)
+			throw new RuntimeException("computeCircularity() failed extracting 2D polygon, sorry.");
+
+		//apply resolution correction
+		if (resolution[0] != 1.0 || resolution[1] != 1.0) {
+			log.info("Applying 2D resolution correction for SHA measure: "+ Arrays.toString(resolution));
+			final double[] x = new double[p.numVertices()];
+			final double[] y = new double[p.numVertices()];
+			for (int cnt = 0; cnt < p.numVertices(); ++cnt) {
+				x[cnt] = resolution[0] * p.vertices().get(cnt).getDoublePosition(0);
+				y[cnt] = resolution[1] * p.vertices().get(cnt).getDoublePosition(1);
+			}
+			p = new DefaultWritablePolygon2D(x,y);
+		}
+
+		log.trace("marker "+fgValue+" area is "+ops.geom().size(p));
+		log.trace("marker "+fgValue+" perimeter is "+ops.geom().boundarySize(p));
+		log.debug("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
+		return ops.geom().circularity(p).getRealDouble();
 	}
 
 
 	/**
-	 * The functions counts how many times the current marker (see below) in the image \e imgFGcurrent
-	 * co-localizes with marker \e prevID in the image \e imgFGprevious. This number is returned.
-	 *
-	 * The cursor \e imgPosition points into the raw image at voxel whose counterparting voxel
-	 * in the \e imgFGcurrent image stores the first (in the sense of \e imgPosition internal
-	 * sweeping order) occurence of the marker that is to be processed with this function.
+	 * The functions counts how many times the given \e marker in the image \e imgFGcurrent
+	 * co-localizes with the same marker in the image \e imgFGprevious. This number is returned.
 	 */
-	private <T extends RealType<T>>
-	long measureObjectsOverlap(final Cursor<T> imgPosition, //pointer to the raw image -> gives current FG ID
+	private
+	long measureObjectsOverlap(final int marker,
 	                           final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
-									   final int prevID, //prev FG ID
 	                           final RandomAccessibleInterval<UnsignedShortType> imgFGprevious) //FG mask
 	{
-		//working copy of the input cursor, this one drives the image sweeping
-		final Cursor<T> rawCursor = imgPosition.copyCursor();
-
-		//working pointers into the (current and previous) object masks
-		final RandomAccess<UnsignedShortType> fgCursor = imgFGcurrent.randomAccess();
-		final RandomAccess<UnsignedShortType> prevFgCursor = imgFGprevious.randomAccess();
-
-		//obtain the ID of the processed object
-		//NB: imgPosition points already at sure existing voxel
-		//NB: rawCursor is as if newly created cursor, i.e., now it points before the image
-		fgCursor.setPosition(imgPosition);
-		final int marker = fgCursor.get().getInteger();
-
-		//return value...
-		long count = 0;
-
-		rawCursor.reset();
-		while (rawCursor.hasNext())
-		{
-			rawCursor.next();
-			fgCursor.setPosition(rawCursor);
-			prevFgCursor.setPosition(rawCursor);
-
-			if (fgCursor.get().getInteger() == marker && prevFgCursor.get().getInteger() == prevID)
-				++count;
-		}
-
-		return(count);
+		final long[] count = {0L};
+		LoopBuilder.setImages(imgFGcurrent,imgFGprevious).forEachPixel( (a,b)
+				-> count[0] += a.getInteger() == marker && b.getInteger() == marker ? 1 : 0 );
+		return(count[0]);
 	}
 
 
-	/**
-	 * The \e curMarker represents the marker whose distance to nearest
-	 * neighbor is to be calculated.
-	 *
-	 * It dilates (with 3x3x... SE) until it hits some other marker and returns Chamfer
-	 * distance to that marker. The iterations (number of dilations) are however limited
-	 * with \e maxIters.
-	 */
-	private <T extends IntegerType<T>>
-	float extractObjectDistance(final Img<T> img, final int curMarker,
-	                            final int maxIters)
+	private int[] _location = new int[3];
+	private void assureArrayLengthFor(final int length)
 	{
-		//overlay over the original input image with special marker boundary
-		T specialBorderMarker = img.firstElement().createVariable();
-		specialBorderMarker.setInteger(-1);
-		final int borderMarker = specialBorderMarker.getInteger(); //short-cut...
-
-		ExtendedRandomAccessibleInterval<T,Img<T>> extImg
-			= Views.extendValue(img, specialBorderMarker);
-
-		//working (float-type) "copies" of the input image
-		if (dilIgA == null || dilIgB == null)
-			throw new IllegalArgumentException("Internal error in extractFGObjectStats(), sorry.");
-		//could also check for proper size of the two images vs. img...
-
-		//overlays over the working copies with extended boundary
-		ExtendedRandomAccessibleInterval<FloatType,Img<FloatType>> dilImgA
-			= Views.extendValue(dilIgA, new FloatType());
-		ExtendedRandomAccessibleInterval<FloatType,Img<FloatType>> dilImgB
-			= Views.extendValue(dilIgB, new FloatType());
-
-		//setup necessary pointers for the tmp images
-		final Cursor<FloatType> sweepCursorA = dilIgA.localizingCursor();
-		final Cursor<FloatType> sweepCursorB = dilIgB.localizingCursor();
-		final RandomAccess<FloatType> outCursorA = dilImgA.randomAccess();
-		final RandomAccess<FloatType> outCursorB = dilImgB.randomAccess();
-
-		//prepare the initial working image
-		Cursor<T> imgCursor = img.localizingCursor();
-		RandomAccess<FloatType> outCursor = outCursorA;
-		int tmp;
-		while (imgCursor.hasNext())
-		{
-			tmp = imgCursor.next().getInteger();
-			outCursor.setPosition(imgCursor);
-			//make sure all voxels are initiated
-			outCursor.get().setReal( tmp == curMarker ? 1.f : 0.f );
+		if (_location.length != length) _location = new int[length];
+	}
+	//
+	private int[] createBox(final Localizable loc)
+	{
+		final int D = loc.numDimensions();
+		assureArrayLengthFor(D);
+		//
+		loc.localize(_location);
+		final int[] bbox = new int[D+D];
+		for (int d = 0; d < D; ++d) {
+			bbox[d]   = _location[d];
+			bbox[d+D] = _location[d];
 		}
-		imgCursor = null;
-
-		//clear the second temp image
-		while (sweepCursorB.hasNext())
-			sweepCursorB.next().setReal(0.f);
-
-		//current working cursors: "sweep" scans the input image, "out" checks the input image
-		boolean AisInput = true;
-		Cursor<FloatType> sweepCursor = sweepCursorA;
-		outCursor = outCursorB;
-		RandomAccess<T> inCursor = extImg.randomAccess();
-
-		boolean hasHit = false;
-		//DEBUG//int closestMarker = 0;
-		float closestDist = Float.MAX_VALUE;
-
-		int iters=0;
-		do
-		{
-			//dilate and check if we are running into somebody
-			//NB: always finish the whole round!
-			sweepCursor.reset();
-			while (sweepCursor.hasNext())
-			{
-				//currently observed distance at the currently examined voxel
-				float curDist = sweepCursor.next().getRealFloat();
-
-				//check we are over "any already touched" voxel:
-				//NB: should be faster than checking if our voxel is a neighbor to "any touched" voxel
-				if (curDist > 0.f)
-				{
-					sweepCursor.localize(pos);
-					//reportCoordinate("found marker "+curMarker+" at: ");
-
-					//BOX STRUCTURING ELEMENT -- APPROXIMATES L2 DISTANCES (Eucledian metric)
-
-					//now check its neighbors..., and update hasHit possibly
-					//NB: always finish the whole round!
-					sweepBox(true); //true means "do init"
-					do
-					{
-						inCursor.setPosition(pos);
-						outCursor.setPosition(pos);
-
-						//First, update the distance value at the current "neighbor" voxel:
-						//so far best distance stored in the output voxel
-						final float neigDist = outCursor.get().getRealFloat();
-
-						//update distance for the current inside-box position
-						/*
-						float offsetDist = 0;
-						for (int i=0; i < box.length; ++i)
-							offsetDist += (float)box[i]*(float)box[i];
-						offsetDist = (float)Math.sqrt(offsetDist);
-						*/
-
-						//NB: this works only for isotropic boxes 3x3x...x3
-						int nonZeroAxesCnt = 0;
-						for (int i=0; i < box.length; ++i)
-							nonZeroAxesCnt += box[i]&1;
-						final float offsetDist = boxDistances[nonZeroAxesCnt];
-
-						//first condition: is there any distance stored already?
-						//second condition: would a move from the current position
-						//improve currently saved distance in the output voxel?
-						if (neigDist == 0. || neigDist > curDist+offsetDist)
-							outCursor.get().setReal(curDist+offsetDist);
-
-						//Second, check we haven't run into another object (marker)
-						int examinedMarker = inCursor.get().getInteger();
-						if (examinedMarker > 0 && examinedMarker != curMarker && examinedMarker != borderMarker)
-						{
-							hasHit = true;
-							curDist = outCursor.get().getRealFloat(); //get fresh distance value
-							//reportCoordinate(curMarker+" found his neighbor "+examinedMarker+" at distance "+curDist+" at: ");
-
-							if (curDist < closestDist)
-							{
-								closestDist = curDist;
-								//DEBUG//closestMarker = examinedMarker;
-							}
-						}
-					}
-					while (sweepBox(false));
-				} //over "already discovered" voxel
-			} //input image sweeping
-
-			//flip the intput/output image sense
-			if (AisInput)
-			{
-				//make B input
-				sweepCursor = sweepCursorB;
-				outCursor = outCursorA;
-				AisInput=false;
-			}
-			else
-			{
-				//make A input
-				sweepCursor = sweepCursorA;
-				outCursor = outCursorB;
-				AisInput=true;
-			}
-
-			//calculates truly a number of iterations (for now)
-			++iters;
-		}
-		while (!hasHit && iters < maxIters);
-
-		//set up the return values
-		if (hasHit)
-		{
-			//objDistance.otherMarker = closestMarker;
-			//objDistance.distance = closestDist;
-			//DEBUG//log.info(curMarker+" found his neighbor "+closestMarker+" at distance "+closestDist+" isotropic voxels.");
-			return (closestDist);
-		}
-		else
-		{
-			//objDistance.otherMarker = -1;
-			//objDistance.distance = (float)maxIters;
-			//DEBUG//log.info(curMarker+" has not found his neighbor with in "+maxIters+" iterations.");
-			return ((float)maxIters);
+		return bbox;
+	}
+	private void extendBox(final int[] bbox, final Localizable loc)
+	{
+		final int D = loc.numDimensions();
+		assureArrayLengthFor(D);
+		//
+		loc.localize(_location);
+		for (int d = 0; d < D; ++d) {
+			bbox[d]   = Math.min(bbox[d],   _location[d]);
+			bbox[d+D] = Math.max(bbox[d+D], _location[d]);
 		}
 	}
-
-	private boolean sweepBox(final boolean init)
+	//
+	private Interval wrapBoxWithInterval(final int[] bbox)
 	{
-		if (init == true)
-		{
-			for (int i=0; i < box.length; ++i)
-			{
-				box[i]=-1;
-				--pos[i];
-			}
-			return (true);
-		}
-		else
-		{
-			int index=box.length-1;
-			while (index >= 0)
-			{
-				++box[index];
-				++pos[index];
-				if (box[index] == 2)
-				{
-					box[index]=-1;
-					pos[index]-=3;
-					--index;
-				}
-				else return (true);
-			}
-		}
-		return (false);
+		if (_interval.numDimensions() * 2 != bbox.length)
+			_interval = new BboxBackedInterval(bbox);
+		_interval.wrapAroundBbox(bbox);
+		return _interval;
 	}
-
-
-	///reports coordinate stored in the internal attribute this.pos[]
-	@SuppressWarnings("unused")
-	private void reportCoordinate(final String msg)
-	{
-		if (pos.length == 3)
-			System.out.println(msg+"("+pos[0]+","+pos[1]+","+pos[2]+")");
-		else
-			System.out.println(msg+"("+pos[0]+","+pos[1]+")");
+	private BboxBackedInterval _interval = new BboxBackedInterval(3);
+	static class BboxBackedInterval extends AbstractInterval {
+		private BboxBackedInterval(final int n) {
+			super(n);
+		}
+		public BboxBackedInterval(final int[] bbox) {
+			super(bbox.length / 2);
+		}
+		public void wrapAroundBbox(final int[] bbox) {
+			final int D = bbox.length / 2;
+			for (int d = 0; d < D; ++d) {
+				min[d] = bbox[d];
+				max[d] = bbox[d+D];
+			}
+		}
 	}
 
 
 	public <T extends RealType<T>>
 	void ClassifyLabels(final int time,
-	                    IterableInterval<T> imgRaw,
+	                    Img<T> imgRaw,
 	                    RandomAccessibleInterval<UnsignedByteType> imgBG,
 	                    Img<UnsignedShortType> imgFG,
 	                    RandomAccessibleInterval<UnsignedShortType> imgFGprev,
@@ -604,6 +501,10 @@ public class ImgQualityDataCache
 		//see extractFGObjectStats() for explanation of this variable
 		double valShift=-1.;
 
+		//bounding boxes
+		final Map<Integer,int[]> bboxes = new HashMap<>(1000);
+		data.boundingBoxesFG.add(bboxes);
+
 		//sweeping variables:
 		final Cursor<T> rawCursor = imgRaw.localizingCursor();
 		final RandomAccess<UnsignedByteType> bgCursor = imgBG.randomAccess();
@@ -637,7 +538,11 @@ public class ImgQualityDataCache
 				}
 			}
 			if (fgCursor.get().getInteger() > 0)
+			{
 				++volFGvoxelCnt; //found FG voxel, update FG stats
+				bboxes.putIfAbsent(fgCursor.get().getInteger(), createBox(rawCursor));
+				extendBox(bboxes.get(fgCursor.get().getInteger()), rawCursor);
+			}
 		}
 
 		//report the "occupancy stats"
@@ -648,6 +553,9 @@ public class ImgQualityDataCache
 		log.info("BG&FG overlapping voxels: "+volFGBGcollisionVoxelCnt+" ( "+100.0*(double)volFGBGcollisionVoxelCnt/imgSize+" %)");
 		final long untouched = imgSize - volFGvoxelCnt - volBGvoxelCnt;
 		log.info("not annotated voxels    : "+untouched+" ( "+100.0*(double)untouched/imgSize+" %)");
+		//
+		for (int marker : bboxes.keySet())
+			log.trace("bbox for marker "+marker+": "+ Arrays.toString(bboxes.get(marker)));
 
 		//finish processing of the BG stats of the current frame
 		if (volBGvoxelCnt > 0)
@@ -668,41 +576,63 @@ public class ImgQualityDataCache
 
 		//now, sweep the image, detect all labels and calculate & save their properties
 		log.info("Retrieving per object statistics, might take some time...");
-		//
-		//set to remember already discovered labels
-		//(with initial capacity for 1000 labels)
-		HashSet<Integer> mDiscovered = new HashSet<Integer>(1000);
 
 		//prepare the per-object data structures
 		data.avgFG.add( new HashMap<>() );
 		data.stdFG.add( new HashMap<>() );
 		data.volumeFG.add( new HashMap<>() );
-		data.surfaceFG.add( new HashMap<>() );
+		data.shaValuesFG.add( new HashMap<>() );
 		data.overlapFG.add( new HashMap<>() );
 		data.nearDistFG.add( new HashMap<>() );
 
-		rawCursor.reset();
-		while (rawCursor.hasNext())
+		final MutualFgDistances fgDists = new MutualFgDistances(imgFG.numDimensions());
+		if (doDensityPrecalculation)
 		{
-			//update cursors...
-			rawCursor.next();
-			fgCursor.setPosition(rawCursor);
-
-			//analyze foreground voxels
-			final int curMarker = fgCursor.get().getInteger();
-			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
+			//get all boundary pixels
+			for (int marker : bboxes.keySet())
 			{
-				//found not-yet-processed FG voxel,
-				//that means: found not-yet-processed FG object
-				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
-
-				if (doDensityPrecalculation)
-					data.nearDistFG.get(time).put(curMarker,
-						extractObjectDistance(imgFG,curMarker, 50) );
-
-				//mark the object (and all its voxels consequently) as processed
-				mDiscovered.add(curMarker);
+				log.trace("Discovering surface for a marker "+marker);
+				fgDists.findAndSaveSurface( marker, imgFG,
+						wrapBoxWithInterval(bboxes.get(marker)) );
 			}
+
+			//fill the distance matrix
+			for (int markerA : bboxes.keySet())
+				for (int markerB : bboxes.keySet())
+					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
+					{
+						log.trace("Computing distance between markers "+markerA+" and "+markerB);
+						fgDists.setDistance(markerA,markerB,
+								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
+					}
+		}
+
+		final Img<BitType> fgBinaryTmp = doShapePrecalculation ?
+				imgFG.factory().imgFactory(new BitType()).create(imgFG) : null;
+		final boolean doSphericity = imgFG.numDimensions() == 3;
+
+		//analyze foreground voxels
+		for (int marker : bboxes.keySet())
+		{
+			//found not-yet-processed FG object
+			final Interval reducedView = wrapBoxWithInterval(bboxes.get(marker));
+			final IntervalView<T> viewRaw = Views.interval(imgRaw, reducedView);
+			final IntervalView<UnsignedShortType> viewFgCurr = Views.interval(imgFG, reducedView);
+			final IntervalView<UnsignedShortType> viewFgPrev = Views.interval(imgFGprev, reducedView);
+
+			extractFGObjectStats(marker, viewRaw,viewFgCurr,viewFgPrev, data,time);
+
+			if (doShapePrecalculation)
+			{
+				final IntervalView<BitType> viewBinTmp = Views.interval(fgBinaryTmp, reducedView);
+				data.shaValuesFG.get(time).put( marker,
+						doSphericity ? computeSphericity(marker,viewFgCurr,viewBinTmp)
+								: computeCircularity(marker,viewFgCurr,viewBinTmp) );
+			}
+
+			if (doDensityPrecalculation)
+				data.nearDistFG.get(time).put( marker,
+						fgDists.getDistance(marker, fgDists.getClosestNeighbor(marker)) );
 		}
 	}
 
@@ -723,27 +653,28 @@ public class ImgQualityDataCache
 	                      final String annPath)
 	throws IOException, ImgIOException
 	{
-		//this functions actually only interates over video folders
+		//this functions actually only iterates over video folders
 		//and calls this.calculateVideo() for every folder
 
 		//test and save the given resolution
 		setResolution(resolution);
 
-		//single or multiple video situation?
-		if (Files.isReadable(
-			new File(String.format("%s/01/t000.tif",imgPath)).toPath()))
+		//single or multiple (does it contain a "01" subfolder) video situation?
+		if (Files.isDirectory( Paths.get(imgPath,"01") ))
 		{
 			//multiple video situation: paths point on a dataset
+			final Logger backupOriginalLog = log;
 			int video = 1;
-			while (Files.isReadable(
-				new File(String.format("%s/%02d/t000.tif",imgPath,video)).toPath()))
+			while (Files.isDirectory( Paths.get(imgPath,(video > 9 ? String.valueOf(video) : "0"+video)) ))
 			{
+				log = backupOriginalLog.subLogger("video 0"+video);
 				final videoDataContainer data = new videoDataContainer(video);
 				calculateVideo(String.format("%s/%02d",imgPath,video),
 				               String.format("%s/%02d_GT",annPath,video), data);
 				this.cachedVideoData.add(data);
 				++video;
 			}
+			log = backupOriginalLog;
 		}
 		else
 		{
@@ -784,7 +715,7 @@ public class ImgQualityDataCache
 		while (Files.isReadable(
 			new File(String.format("%s/t%0"+noOfDigits+"d.tif",imgPath,time)).toPath()))
 		{
-			//read the image tripple (raw image, FG labels, BG label)
+			//read the image triple (raw image, FG labels, BG label)
 			Img<?> img
 				= tCache.ReadImage(String.format("%s/t%0"+noOfDigits+"d.tif",imgPath,time));
 
@@ -794,34 +725,7 @@ public class ImgQualityDataCache
 			Img<UnsignedByteType> imgBG
 				= tCache.ReadImageG8(String.format("%s/BG/mask%0"+noOfDigits+"d.tif",annPath,time));
 
-			//time to allocate helper variables?
-			if (time == 0)
-			{
-				//positions and box sweeping:
-				pos = new int[imgFG.numDimensions()];
-				box = new int[imgFG.numDimensions()];
-
-				//pre-calculating distances with box (any box point from box centre)
-				//based on how many non-zero elements is available in a vector
-				//that points at any box point
-				//NB: hard-fixed for up to 10-dimensional image
-				//NB: this works only for isotropic boxes 3x3x...x3
-				boxDistances = new float[10];
-				for (int i=1; i < 10; ++i)
-					boxDistances[i] = (float)Math.sqrt((double)i);
-
-				//creating tmp images of the right size:
-				int[] dims = new int[imgFG.numDimensions()];
-				for (int n=0; n < imgFG.numDimensions(); ++n)
-					dims[n] = (int)imgFG.dimension(n);
-				ArrayImgFactory<FloatType> imgFactory = new ArrayImgFactory<>(new FloatType());
-				dilIgA = imgFactory.create(dims);
-				dilIgB = imgFactory.create(dims);
-				dims = null;
-				imgFactory = null;
-			}
-
-			ClassifyLabels(time, (IterableInterval)img, imgBG, imgFG, imgFGprev, data);
+			ClassifyLabels(time, (Img)img, imgBG, imgFG, imgFGprev, data);
 
 			imgFGprev = null; //be explicit that we do not want this in memory anymore
 			imgFGprev = imgFG;

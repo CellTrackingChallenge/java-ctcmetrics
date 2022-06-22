@@ -4,12 +4,12 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>30.0.0</version>
+		<version>31.1.0</version>
 	</parent>
 
 	<groupId>net.celltrackingchallenge</groupId>
 	<artifactId>CTC-measures</artifactId>
-	<version>0.9.0</version>
+	<version>0.9.5</version>
 
 	<organization>
 		<name>The Cell Tracking Challenge</name>
@@ -160,6 +160,13 @@
 					<artifactId>xalan</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+
+		<!-- for meshes -->
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej-ops</artifactId>
+			<version>${imagej-ops.version}</version>
 		</dependency>
 	</dependencies>
 </project>
