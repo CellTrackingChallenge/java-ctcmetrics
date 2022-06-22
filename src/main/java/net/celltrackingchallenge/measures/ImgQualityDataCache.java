@@ -237,18 +237,26 @@ public class ImgQualityDataCache
 	 * This function pushes into global data at the specific \e time .
 	 */
 	private <T extends RealType<T>>
-	void extractFGObjectStats(final Cursor<T> imgPosition, final int time, //who: "object" @ time
-		final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent,     //where: input masks
-		final RandomAccessibleInterval<UnsignedShortType> imgFGprevious,
-		final videoDataContainer data)
+	void extractFGObjectStats(final int marker,
+		final IterableInterval<T> iRaw,
+		final RandomAccessibleInterval<UnsignedShortType> iFgCurr,     //where: input masks
+		final RandomAccessibleInterval<UnsignedShortType> iFgPrev,
+		final videoDataContainer data, final int time)
 	{
 		//working pointers into the mask images
-		final RandomAccess<UnsignedShortType> fgCursor = imgFGcurrent.randomAccess();
+		final Cursor<T> rawCursor = iRaw.localizingCursor();
+		final RandomAccess<UnsignedShortType> fgCursor = iFgCurr.randomAccess();
 
-		//obtain the ID of the processed object
-		//NB: imgPosition points already at sure existing voxel
-		fgCursor.setPosition(imgPosition);
-		final int marker = fgCursor.get().getInteger();
+		//advance until over 'marker' object/pixel
+		while (rawCursor.hasNext()) {
+			rawCursor.next();
+			if (fgCursor.setPositionAndGet(rawCursor).getInteger() == marker) break;
+		}
+		if (fgCursor.get().getInteger() != marker)
+			throw new RuntimeException("Inconsistency when seeking marker "+marker);
+		//NB: the first voxel with 'marker' is now discovered; since we will
+		//    continue sweeping the image from the next voxel, we will already
+		//    count-in this current voxel -> thus, vxlCnt = 1
 
 		//init aux variables:
 		double intSum = 0.; //for single-pass calculation of mean and variance
@@ -257,16 +265,13 @@ public class ImgQualityDataCache
 		//to fight against numerical issues we introduce a "value shifter",
 		//which we can already initiate with an "estimate of mean" which we
 		//derive from the object's first spotted voxel value
-		//NB: imgPosition points already at sure existing voxel
-		final double valShift=imgPosition.get().getRealDouble();
+		//NB: rawCursor points already at sure existing voxel
+		final double valShift=rawCursor.get().getRealDouble();
 
 		//the voxel counter (for volume)
-		long vxlCnt = 0L;
+		long vxlCnt = 1L;
 
-		//working copy of the input cursor, this one drives the image sweeping
-		//sweep the image and search for this object/marker
-		final Cursor<T> rawCursor = imgPosition.copyCursor();
-		rawCursor.reset();
+		//continue sweeping the image while searching further for this object/marker
 		while (rawCursor.hasNext())
 		{
 			rawCursor.next();
@@ -302,7 +307,7 @@ public class ImgQualityDataCache
 		//also process the "overlap feature" (if the object was found in the previous frame)
 		if (time > 0 && data.volumeFG.get(time-1).get(marker) != null)
 			data.overlapFG.get(time).put(marker,
-				measureObjectsOverlap(imgPosition,imgFGcurrent, marker,imgFGprevious) );
+				measureObjectsOverlap(marker,iFgCurr,iFgPrev) );
 	}
 
 
@@ -374,47 +379,18 @@ public class ImgQualityDataCache
 
 
 	/**
-	 * The functions counts how many times the current marker (see below) in the image \e imgFGcurrent
-	 * co-localizes with marker \e prevID in the image \e imgFGprevious. This number is returned.
-	 *
-	 * The cursor \e imgPosition points into the raw image at voxel whose counterparting voxel
-	 * in the \e imgFGcurrent image stores the first (in the sense of \e imgPosition internal
-	 * sweeping order) occurence of the marker that is to be processed with this function.
+	 * The functions counts how many times the given \e marker in the image \e imgFGcurrent
+	 * co-localizes with the same marker in the image \e imgFGprevious. This number is returned.
 	 */
-	private <T extends RealType<T>>
-	long measureObjectsOverlap(final Cursor<T> imgPosition, //pointer to the raw image -> gives current FG ID
+	private
+	long measureObjectsOverlap(final int marker,
 	                           final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
-									   final int prevID, //prev FG ID
 	                           final RandomAccessibleInterval<UnsignedShortType> imgFGprevious) //FG mask
 	{
-		//working copy of the input cursor, this one drives the image sweeping
-		final Cursor<T> rawCursor = imgPosition.copyCursor();
-
-		//working pointers into the (current and previous) object masks
-		final RandomAccess<UnsignedShortType> fgCursor = imgFGcurrent.randomAccess();
-		final RandomAccess<UnsignedShortType> prevFgCursor = imgFGprevious.randomAccess();
-
-		//obtain the ID of the processed object
-		//NB: imgPosition points already at sure existing voxel
-		//NB: rawCursor is as if newly created cursor, i.e., now it points before the image
-		fgCursor.setPosition(imgPosition);
-		final int marker = fgCursor.get().getInteger();
-
-		//return value...
-		long count = 0;
-
-		rawCursor.reset();
-		while (rawCursor.hasNext())
-		{
-			rawCursor.next();
-			fgCursor.setPosition(rawCursor);
-			prevFgCursor.setPosition(rawCursor);
-
-			if (fgCursor.get().getInteger() == marker && prevFgCursor.get().getInteger() == prevID)
-				++count;
-		}
-
-		return(count);
+		final long[] count = {0L};
+		LoopBuilder.setImages(imgFGcurrent,imgFGprevious).forEachPixel( (a,b)
+				-> count[0] += a.getInteger() == marker && b.getInteger() == marker ? 1 : 0 );
+		return(count[0]);
 	}
 
 
