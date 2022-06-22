@@ -38,7 +38,7 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.roi.geom.real.DefaultWritablePolygon2D;
 import net.imglib2.roi.geom.real.Polygon2D;
 import net.imglib2.type.logic.BitType;
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import net.imglib2.img.Img;
 import net.imglib2.IterableInterval;
@@ -66,7 +66,8 @@ import java.util.LinkedList;
 public class ImgQualityDataCache
 {
 	///shortcuts to some Fiji services
-	private final LogService log;
+	private final Logger log;
+	private OpService ops;
 
 	/**
 	 * flag to notify ClassifyLabels() if to call extractObjectDistance()
@@ -80,13 +81,16 @@ public class ImgQualityDataCache
 	public int noOfDigits = 3;
 
 	///a constructor requiring connection to Fiji report/log services
-	public ImgQualityDataCache(final LogService _log)
+	public ImgQualityDataCache(final Logger _log, final OpService _ops)
 	{
 		//check that non-null was given for _log!
 		if (_log == null)
 			throw new NullPointerException("No log service supplied.");
-
 		log = _log;
+
+		if (_ops == null)
+			log.warn("OpService not provided, some measures may not be functional...");
+		ops = _ops;
 	}
 
 	/**
@@ -95,20 +99,23 @@ public class ImgQualityDataCache
 	 * given in the foreign \e _cache; \e _cache can be null and then
 	 * nothing is preserved
 	 */
-	public ImgQualityDataCache(final LogService _log, final ImgQualityDataCache _cache)
+	public ImgQualityDataCache(final Logger _log, final OpService _ops, final ImgQualityDataCache _cache)
 	{
-		//check that non-null was given for _log!
-		if (_log == null)
-			throw new NullPointerException("No log service supplied.");
-
-		log = _log;
+		this(_log,_ops);
 
 		if (_cache != null)
 		{
 			//preserve the feature flags
 			doDensityPrecalculation = _cache.doDensityPrecalculation;
 			doShapePrecalculation   = _cache.doShapePrecalculation;
+			noOfDigits = _cache.noOfDigits;
 		}
+	}
+
+	public
+	void provideOpService(final OpService _ops)
+	{
+		ops = _ops;
 	}
 
 	///GT and RES paths combination for which this cache is valid, null means invalid
@@ -303,7 +310,6 @@ public class ImgQualityDataCache
 	                         final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
 	                         final RandomAccessibleInterval<BitType> imgTmpSharedStorage)
 	{
-		OpService ops = log.getContext().getService(OpService.class);
 		if (ops == null)
 			throw new RuntimeException("computeSphericity() is missing the Ops service in its context, sorry.");
 
@@ -322,8 +328,9 @@ public class ImgQualityDataCache
 			mv.setPosition(cnt, resolution[0]*mv.x(cnt), resolution[1]*mv.y(cnt), resolution[2]*mv.z(cnt) );
 		}
 
-		//System.out.println("      size: "+ops.geom().size(m));
-		//System.out.println("   surface: "+ops.geom().boundarySize(m));
+		log.trace("marker "+fgValue+" volume is "+ops.geom().size(m));
+		log.trace("marker "+fgValue+" surface is "+ops.geom().boundarySize(m));
+		log.info("Sphericity of a marker "+fgValue+" is "+ops.geom().sphericity(m).getRealDouble());
 		return ops.geom().sphericity(m).getRealDouble();
 	}
 
@@ -332,7 +339,6 @@ public class ImgQualityDataCache
 	                          final RandomAccessibleInterval<UnsignedShortType> imgFGcurrent, //FG mask
 	                          final RandomAccessibleInterval<BitType> imgTmpSharedStorage)
 	{
-		OpService ops = log.getContext().getService(OpService.class);
 		if (ops == null)
 			throw new RuntimeException("computeCircularity() is missing the Ops service in its context, sorry.");
 
@@ -359,6 +365,9 @@ public class ImgQualityDataCache
 			p = new DefaultWritablePolygon2D(x,y);
 		}
 
+		log.trace("marker "+fgValue+" area is "+ops.geom().size(p));
+		log.trace("marker "+fgValue+" perimeter is "+ops.geom().boundarySize(p));
+		log.info("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
 		return ops.geom().circularity(p).getRealDouble();
 	}
 
@@ -603,15 +612,21 @@ public class ImgQualityDataCache
 		{
 			//get all boundary pixels
 			for (int marker : bboxes.keySet())
+			{
+				log.info("Discovering surface for a marker "+marker);
 				fgDists.findAndSaveSurface( marker, imgFG,
 						wrapBoxWithInterval(bboxes.get(marker)) );
+			}
 
 			//fill the distance matrix
 			for (int markerA : bboxes.keySet())
 				for (int markerB : bboxes.keySet())
 					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
+					{
+						log.info("Computing distance between markers "+markerA+" and "+markerB);
 						fgDists.setDistance(markerA,markerB,
 								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
+					}
 		}
 
 		final Img<BitType> fgBinaryTmp = doShapePrecalculation ?

@@ -27,7 +27,8 @@
  */
 package net.celltrackingchallenge.measures;
 
-import org.scijava.log.LogService;
+import net.imagej.ops.OpService;
+import org.scijava.log.Logger;
 
 import java.util.Vector;
 import java.util.HashMap;
@@ -35,8 +36,8 @@ import java.util.HashMap;
 public class SHA extends AbstractDSmeasure
 {
 	///a constructor requiring connection to Fiji report/log services
-	public SHA(final LogService _log)
-	{ super(_log); }
+	public SHA(final Logger _log, final OpService _ops)
+	{ super(_log,_ops); }
 
 
 	//---------------------------------------------------------------------/

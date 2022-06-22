@@ -27,7 +27,8 @@
  */
 package net.celltrackingchallenge.measures;
 
-import org.scijava.log.LogService;
+import net.imagej.ops.OpService;
+import org.scijava.log.Logger;
 
 import io.scif.img.ImgIOException;
 import java.io.IOException;
@@ -35,16 +36,23 @@ import java.io.IOException;
 public abstract class AbstractDSmeasure
 {
 	///shortcuts to some Fiji services
-	protected final LogService log;
+	protected final Logger log;
+	protected final OpService ops;
 
 	///a constructor requiring connection to Fiji report/log services
-	public AbstractDSmeasure(final LogService _log)
+	public AbstractDSmeasure(final Logger _log)
+	{
+		this(_log,null);
+	}
+
+	public AbstractDSmeasure(final Logger _log, final OpService _ops)
 	{
 		//check that non-null was given for _log!
 		if (_log == null)
 			throw new NullPointerException("No log service supplied.");
 
 		log = _log;
+		ops = _ops;
 	}
 
 	///reference on cache that we used recently
@@ -110,7 +118,7 @@ public abstract class AbstractDSmeasure
 		if (cache == null)
 		{
 			//do the upper stage
-			cache = new ImgQualityDataCache(log, _cache);
+			cache = new ImgQualityDataCache(log,ops, _cache);
 			cache.calculate(imgPath, resolution, annPath);
 		}
 	}

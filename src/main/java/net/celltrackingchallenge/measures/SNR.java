@@ -27,7 +27,7 @@
  */
 package net.celltrackingchallenge.measures;
 
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import java.util.Vector;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ import java.util.HashMap;
 public class SNR extends AbstractDSmeasure
 {
 	///a constructor requiring connection to Fiji report/log services
-	public SNR(final LogService _log)
+	public SNR(final Logger _log)
 	{ super(_log); }
 
 
