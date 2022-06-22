@@ -341,7 +341,7 @@ public class ImgQualityDataCache
 
 		log.trace("marker "+fgValue+" volume is "+ops.geom().size(m));
 		log.trace("marker "+fgValue+" surface is "+ops.geom().boundarySize(m));
-		log.info("Sphericity of a marker "+fgValue+" is "+ops.geom().sphericity(m).getRealDouble());
+		log.debug("Sphericity of a marker "+fgValue+" is "+ops.geom().sphericity(m).getRealDouble());
 		return ops.geom().sphericity(m).getRealDouble();
 	}
 
@@ -378,7 +378,7 @@ public class ImgQualityDataCache
 
 		log.trace("marker "+fgValue+" area is "+ops.geom().size(p));
 		log.trace("marker "+fgValue+" perimeter is "+ops.geom().boundarySize(p));
-		log.info("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
+		log.debug("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
 		return ops.geom().circularity(p).getRealDouble();
 	}
 
@@ -591,7 +591,7 @@ public class ImgQualityDataCache
 			//get all boundary pixels
 			for (int marker : bboxes.keySet())
 			{
-				log.info("Discovering surface for a marker "+marker);
+				log.trace("Discovering surface for a marker "+marker);
 				fgDists.findAndSaveSurface( marker, imgFG,
 						wrapBoxWithInterval(bboxes.get(marker)) );
 			}
@@ -601,7 +601,7 @@ public class ImgQualityDataCache
 				for (int markerB : bboxes.keySet())
 					if (markerA != markerB && fgDists.getDistance(markerA,markerB) == Float.MAX_VALUE)
 					{
-						log.info("Computing distance between markers "+markerA+" and "+markerB);
+						log.trace("Computing distance between markers "+markerA+" and "+markerB);
 						fgDists.setDistance(markerA,markerB,
 								fgDists.computeTwoSurfacesDistance(markerA,markerB, 9) );
 					}
