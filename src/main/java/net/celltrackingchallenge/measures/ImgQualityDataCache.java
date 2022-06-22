@@ -38,6 +38,8 @@ import net.imglib2.loops.LoopBuilder;
 import net.imglib2.roi.geom.real.DefaultWritablePolygon2D;
 import net.imglib2.roi.geom.real.Polygon2D;
 import net.imglib2.type.logic.BitType;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.Views;
 import org.scijava.log.Logger;
 
 import net.imglib2.img.Img;
@@ -58,7 +60,6 @@ import io.scif.img.ImgIOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Vector;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
@@ -475,7 +476,7 @@ public class ImgQualityDataCache
 
 	public <T extends RealType<T>>
 	void ClassifyLabels(final int time,
-	                    IterableInterval<T> imgRaw,
+	                    Img<T> imgRaw,
 	                    RandomAccessibleInterval<UnsignedByteType> imgBG,
 	                    Img<UnsignedShortType> imgFG,
 	                    RandomAccessibleInterval<UnsignedShortType> imgFGprev,
@@ -594,10 +595,6 @@ public class ImgQualityDataCache
 
 		//now, sweep the image, detect all labels and calculate & save their properties
 		log.info("Retrieving per object statistics, might take some time...");
-		//
-		//set to remember already discovered labels
-		//(with initial capacity for 1000 labels)
-		HashSet<Integer> mDiscovered = new HashSet<>(1000);
 
 		//prepare the per-object data structures
 		data.avgFG.add( new HashMap<>() );
@@ -633,32 +630,28 @@ public class ImgQualityDataCache
 				imgFG.factory().imgFactory(new BitType()).create(imgFG) : null;
 		final boolean doSphericity = imgFG.numDimensions() == 3;
 
-		rawCursor.reset();
-		while (rawCursor.hasNext())
+		//analyze foreground voxels
+		for (int marker : bboxes.keySet())
 		{
-			//update cursors...
-			rawCursor.next();
-			fgCursor.setPosition(rawCursor);
+			//found not-yet-processed FG object
+			final Interval reducedView = wrapBoxWithInterval(bboxes.get(marker));
+			final IntervalView<T> viewRaw = Views.interval(imgRaw, reducedView);
+			final IntervalView<UnsignedShortType> viewFgCurr = Views.interval(imgFG, reducedView);
+			final IntervalView<UnsignedShortType> viewFgPrev = Views.interval(imgFGprev, reducedView);
 
-			//analyze foreground voxels
-			final int curMarker = fgCursor.get().getInteger();
-			if ( curMarker > 0 && (!mDiscovered.contains(curMarker)) )
+			extractFGObjectStats(marker, viewRaw,viewFgCurr,viewFgPrev, data,time);
+
+			if (doShapePrecalculation)
 			{
-				//found not-yet-processed FG object
-				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
-
-				if (doShapePrecalculation)
-					data.shaValuesFG.get(time).put( curMarker,
-							doSphericity ? computeSphericity(curMarker,imgFG,fgBinaryTmp)
-									: computeCircularity(curMarker,imgFG,fgBinaryTmp) );
-
-				if (doDensityPrecalculation)
-					data.nearDistFG.get(time).put( curMarker,
-							fgDists.getDistance(curMarker, fgDists.getClosestNeighbor(curMarker)) );
-
-				//mark the object (and all its voxels consequently) as processed
-				mDiscovered.add(curMarker);
+				final IntervalView<BitType> viewBinTmp = Views.interval(fgBinaryTmp, reducedView);
+				data.shaValuesFG.get(time).put( marker,
+						doSphericity ? computeSphericity(marker,viewFgCurr,viewBinTmp)
+								: computeCircularity(marker,viewFgCurr,viewBinTmp) );
 			}
+
+			if (doDensityPrecalculation)
+				data.nearDistFG.get(time).put( marker,
+						fgDists.getDistance(marker, fgDists.getClosestNeighbor(marker)) );
 		}
 	}
 
@@ -748,7 +741,7 @@ public class ImgQualityDataCache
 			Img<UnsignedByteType> imgBG
 				= tCache.ReadImageG8(String.format("%s/BG/mask%0"+noOfDigits+"d.tif",annPath,time));
 
-			ClassifyLabels(time, (IterableInterval)img, imgBG, imgFG, imgFGprev, data);
+			ClassifyLabels(time, (Img)img, imgBG, imgFG, imgFGprev, data);
 
 			imgFGprev = null; //be explicit that we do not want this in memory anymore
 			imgFGprev = imgFG;
