@@ -67,7 +67,7 @@ import java.util.LinkedList;
 public class ImgQualityDataCache
 {
 	///shortcuts to some Fiji services
-	private final Logger log;
+	private Logger log;
 	OpService ops;
 
 	/**
@@ -663,15 +663,18 @@ public class ImgQualityDataCache
 		if (Files.isDirectory( Paths.get(imgPath,"01") ))
 		{
 			//multiple video situation: paths point on a dataset
+			final Logger backupOriginalLog = log;
 			int video = 1;
 			while (Files.isDirectory( Paths.get(imgPath,(video > 9 ? String.valueOf(video) : "0"+video)) ))
 			{
+				log = backupOriginalLog.subLogger("video 0"+video);
 				final videoDataContainer data = new videoDataContainer(video);
 				calculateVideo(String.format("%s/%02d",imgPath,video),
 				               String.format("%s/%02d_GT",annPath,video), data);
 				this.cachedVideoData.add(data);
 				++video;
 			}
+			log = backupOriginalLog;
 		}
 		else
 		{
