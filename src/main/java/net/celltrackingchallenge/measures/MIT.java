@@ -27,7 +27,7 @@
  */
 package net.celltrackingchallenge.measures;
 
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +38,7 @@ import net.celltrackingchallenge.measures.TrackDataCache.Track;
 public class MIT extends AbstractDSmeasure
 {
 	///a constructor requiring connection to Fiji report/log services
-	public MIT(final LogService _log)
+	public MIT(final Logger _log)
 	{ super(_log); }
 
 	private double mit = -1.0;
