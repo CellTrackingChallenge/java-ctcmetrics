@@ -121,7 +121,7 @@ public class ImgQualityDataCache
 	{
 		return ( imgPath != null &&  annPath != null
 		     && _imgPath != null && _annPath != null
-		     && imgPath == _imgPath
+		     && imgPath == _imgPath //intentional match on reference (and on the content)
 		     && annPath == _annPath);
 	}
 
@@ -349,7 +349,7 @@ public class ImgQualityDataCache
 
 		//apply resolution correction
 		if (resolution[0] != 1.0 || resolution[1] != 1.0) {
-			log.info("Applying 2D resolution correction for SHA measure: "+resolution);
+			log.info("Applying 2D resolution correction for SHA measure: "+ Arrays.toString(resolution));
 			final double[] x = new double[p.numVertices()];
 			final double[] y = new double[p.numVertices()];
 			for (int cnt = 0; cnt < p.numVertices(); ++cnt) {
