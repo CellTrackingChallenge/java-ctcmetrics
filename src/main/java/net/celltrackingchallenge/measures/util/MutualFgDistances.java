@@ -127,6 +127,8 @@ public class MutualFgDistances {
 		final IntervalView<T> pixels = Views.interval(inThisMask, withinThisROI);
 		//...and an image of zero-extended original data (to shift and reduce it later)
 		final IntervalView<T> expandedMask = Views.expandZero(inThisMask, 5, 5, 5);
+		//NB: when the border is more-dimensional than the mask image, that is when
+		//    the mask image is two-dimensional, the mask will remain two-dimensional
 
 		surfaceCoordsPerLabel.put(ofThisMarker, new ArrayList<>(600000));
 		for (long[] dir : pxsNeigsPattern)
