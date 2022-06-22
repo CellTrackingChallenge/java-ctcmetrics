@@ -68,7 +68,7 @@ public class ImgQualityDataCache
 {
 	///shortcuts to some Fiji services
 	private final Logger log;
-	private OpService ops;
+	OpService ops;
 
 	/**
 	 * flag to notify ClassifyLabels() if to call extractObjectDistance()
@@ -100,9 +100,10 @@ public class ImgQualityDataCache
 	 * given in the foreign \e _cache; \e _cache can be null and then
 	 * nothing is preserved
 	 */
-	public ImgQualityDataCache(final Logger _log, final OpService _ops, final ImgQualityDataCache _cache)
+	public ImgQualityDataCache(final Logger _log, final ImgQualityDataCache _cache)
 	{
-		this(_log,_ops);
+		this(_log, _cache != null ? _cache.ops : null);
+		//NB: reuse ops from the given _cache, if there is some...
 
 		if (_cache != null)
 		{
@@ -110,6 +111,10 @@ public class ImgQualityDataCache
 			doDensityPrecalculation = _cache.doDensityPrecalculation;
 			doShapePrecalculation   = _cache.doShapePrecalculation;
 			noOfDigits = _cache.noOfDigits;
+		}
+		else
+		{
+			log.warn("Couldn't provide OpService because no cache was given.");
 		}
 	}
 

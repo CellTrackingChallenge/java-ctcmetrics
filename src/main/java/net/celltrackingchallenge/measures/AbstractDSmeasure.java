@@ -118,7 +118,8 @@ public abstract class AbstractDSmeasure
 		if (cache == null)
 		{
 			//do the upper stage
-			cache = new ImgQualityDataCache(log,ops, _cache);
+			cache = new ImgQualityDataCache(log, _cache);
+			if (cache.ops == null) cache.ops = this.ops;
 			cache.calculate(imgPath, resolution, annPath);
 		}
 	}
