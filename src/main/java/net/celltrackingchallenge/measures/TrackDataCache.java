@@ -27,7 +27,7 @@
  */
 package net.celltrackingchallenge.measures;
 
-import org.scijava.log.LogService;
+import org.scijava.log.Logger;
 
 import net.imglib2.img.Img;
 import net.imglib2.IterableInterval;
@@ -55,10 +55,10 @@ import java.util.HashMap;
 public class TrackDataCache
 {
 	///shortcuts to some Fiji services
-	private final LogService log;
+	private final Logger log;
 
 	///a constructor requiring connection to Fiji report/log services
-	public TrackDataCache(final LogService _log)
+	public TrackDataCache(final Logger _log)
 	{
 		//check that non-null was given for _log!
 		if (_log == null)
@@ -414,7 +414,7 @@ public class TrackDataCache
 
 	public static
 	void LoadTrackFile(final String fname, final Map<Integer,Track> track_list,
-	                   final LogService log)
+	                   final Logger log)
 	throws IOException
 	{
 		Scanner s = null;
