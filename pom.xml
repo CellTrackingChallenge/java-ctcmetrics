@@ -9,7 +9,7 @@
 
 	<groupId>net.celltrackingchallenge</groupId>
 	<artifactId>CTC-measures</artifactId>
-	<version>0.9.5</version>
+	<version>0.9.6-SNAPSHOT</version>
 
 	<organization>
 		<name>The Cell Tracking Challenge</name>
