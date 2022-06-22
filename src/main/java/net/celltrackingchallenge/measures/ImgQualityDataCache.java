@@ -328,8 +328,8 @@ public class ImgQualityDataCache
 			mv.setPosition(cnt, resolution[0]*mv.x(cnt), resolution[1]*mv.y(cnt), resolution[2]*mv.z(cnt) );
 		}
 
-		//System.out.println("      size: "+ops.geom().size(m));
-		//System.out.println("   surface: "+ops.geom().boundarySize(m));
+		log.trace("marker "+fgValue+" volume is "+ops.geom().size(m));
+		log.trace("marker "+fgValue+" surface is "+ops.geom().boundarySize(m));
 		log.info("Sphericity of a marker "+fgValue+" is "+ops.geom().sphericity(m).getRealDouble());
 		return ops.geom().sphericity(m).getRealDouble();
 	}
@@ -365,6 +365,8 @@ public class ImgQualityDataCache
 			p = new DefaultWritablePolygon2D(x,y);
 		}
 
+		log.trace("marker "+fgValue+" area is "+ops.geom().size(p));
+		log.trace("marker "+fgValue+" perimeter is "+ops.geom().boundarySize(p));
 		log.info("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
 		return ops.geom().circularity(p).getRealDouble();
 	}
