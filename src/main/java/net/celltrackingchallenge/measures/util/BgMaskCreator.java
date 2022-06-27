@@ -2,6 +2,7 @@ package net.celltrackingchallenge.measures.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Set;
@@ -42,13 +43,25 @@ public class BgMaskCreator {
 
 	private BgMaskCreator(final String inFiles, final String outFiles,
 	                      final Set<Integer> tps, final boolean doOneMask,
-	                      final int noOfErosions, final Logger log) {
+	                      final int noOfErosions, final Logger log) throws IOException {
 		inputFilesPattern = inFiles;
 		outputFilesPattern = outFiles;
 		timepoints = tps;
 		doMaskValidForAllTPs = doOneMask;
 		widthOfPostProcessingErosion = noOfErosions;
 		logger = log;
+
+		int sepIdx = outputFilesPattern.lastIndexOf(File.separator);
+		if (sepIdx > 0) {
+			//there is some folder path in the pattern
+			final Path outFolder = Paths.get(outputFilesPattern.substring(0, sepIdx));
+			if (!Files.exists(outFolder)) {
+				logger.info("Creating output folder:  "+outFolder);
+				Files.createDirectory(outFolder);
+			} else if (!Files.isDirectory(outFolder)) {
+				throw new IllegalStateException("Output folder '"+outFolder+"' exists but is not a directory!");
+			}
+		}
 	}
 
 	public static class Builder {
@@ -59,7 +72,7 @@ public class BgMaskCreator {
 		public int widthOfPostProcessingErosion = 0;
 		public Logger logger = null;
 
-		public BgMaskCreator build() {
+		public BgMaskCreator build() throws IOException {
 			if (logger == null)
 				throw new IllegalStateException("Some logger must be set beforehand.");
 
