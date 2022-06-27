@@ -14,6 +14,8 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
+import net.imglib2.view.Views;
+import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.algorithm.morphology.Erosion;
 import net.imglib2.algorithm.neighborhood.Shape;
@@ -193,6 +195,8 @@ public class BgMaskCreator {
 
 		final TrackDataCache loader = new TrackDataCache(logger);
 		Img<UnsignedByteType> bgImg = null;
+		Img<UnsignedByteType> bgImgPostProcessed = null;
+		ExtendedRandomAccessibleInterval<UnsignedByteType, Img<UnsignedByteType>> extViewBgImage = null;
 
 		for (int tp : timepoints) {
 			//load input
@@ -200,33 +204,45 @@ public class BgMaskCreator {
 
 			//setup output
 			if (bgImg == null) {
+				//first timepoint -> get memory to hold aux and output images
 				bgImg = fgImg.factory().imgFactory(new UnsignedByteType()).create(fgImg);
+				if (postProcessingSE != null) {
+					//view on the same data, just with a broader coord domain...
+					extViewBgImage = Views.extendValue(bgImg, 255);
+					//the same (reusable) output image
+					bgImgPostProcessed = bgImg.factory().create(bgImg);
+				} else {
+					bgImgPostProcessed = bgImg;
+				}
+
 				LoopBuilder.setImages(bgImg).forEachPixel(UnsignedByteType::setOne);
 				//NB: we gonna be clearing pixels where fg has some label
 			}
 			LoopBuilder.setImages(fgImg,bgImg).forEachPixel((fg,bg) -> { if (fg.getInteger() > 0) bg.setZero(); });
 
 			if (!doMaskValidForAllTPs) {
-				postProcessMask(bgImg);
-				saveMask(bgImg,tp);
+				postProcessMask(extViewBgImage,bgImgPostProcessed);
+				saveMask(bgImgPostProcessed,tp);
 				LoopBuilder.setImages(bgImg).forEachPixel(UnsignedByteType::setOne);
 			}
 		}
 
 		if (doMaskValidForAllTPs) {
-			postProcessMask(bgImg);
+			postProcessMask(extViewBgImage,bgImgPostProcessed);
+			//
 			//saves the first time point
-			saveMask(bgImg, timepoints.iterator().next());
+			saveMask(bgImgPostProcessed, timepoints.iterator().next());
 			//or
 			//saves all the timepoints
-			//for (int tp : timepoints) saveMask(bgImg, tp);
+			//for (int tp : timepoints) saveMask(bgImgPostProcessed, tp);
 		}
 	}
 
-	<T extends IntegerType<T>> void postProcessMask(final Img<T> img) {
-		logger.info("Going to post process, width = "+widthOfPostProcessingErosion);
-		Erosion.erode(img,new HyperSphereShape(widthOfPostProcessingErosion),10);
+	<T extends IntegerType<T>>
+	void postProcessMask(final ExtendedRandomAccessibleInterval<T, Img<T>> inImg, final Img<T> outImg) {
 		if (postProcessingSE == null) return;
+		logger.info("Going to post process...");
+		Erosion.erode(inImg,outImg,postProcessingSE,10);
 	}
 
 	void saveMask(final RandomAccessibleInterval<?> img, final int tp) {
