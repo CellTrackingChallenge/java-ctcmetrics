@@ -16,6 +16,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.algorithm.morphology.Erosion;
+import net.imglib2.algorithm.neighborhood.Shape;
 import net.imglib2.algorithm.neighborhood.HyperSphereShape;
 
 import org.scijava.log.Logger;
@@ -36,7 +37,7 @@ public class BgMaskCreator {
 	//  boolean: own mask per TP, or one universal mask
 	//  post processing: how many pixels-wide erosion
 	private final boolean doMaskValidForAllTPs;
-	private final int widthOfPostProcessingErosion;
+	private final Shape postProcessingSE;
 
 	//params - reporting facility
 	private final Logger logger;
@@ -48,7 +49,7 @@ public class BgMaskCreator {
 		outputFilesPattern = outFiles;
 		timepoints = tps;
 		doMaskValidForAllTPs = doOneMask;
-		widthOfPostProcessingErosion = noOfErosions;
+		postProcessingSE = noOfErosions > 0 ? new HyperSphereShape(noOfErosions) : null;
 		logger = log;
 
 		int sepIdx = outputFilesPattern.lastIndexOf(File.separator);
@@ -187,7 +188,6 @@ public class BgMaskCreator {
 		logger.info("Getting masks for files: "+inputFilesPattern);
 		logger.info("... for timepoints: "+timepoints);
 		logger.info("... with One mask for all: "+doMaskValidForAllTPs);
-		logger.info("... with erosion width: "+widthOfPostProcessingErosion);
 		logger.info("Saving masks as: "+outputFilesPattern);
 		logger.info("-------------");
 
@@ -224,9 +224,9 @@ public class BgMaskCreator {
 	}
 
 	<T extends IntegerType<T>> void postProcessMask(final Img<T> img) {
-		if (widthOfPostProcessingErosion == 0) return;
 		logger.info("Going to post process, width = "+widthOfPostProcessingErosion);
 		Erosion.erode(img,new HyperSphereShape(widthOfPostProcessingErosion),10);
+		if (postProcessingSE == null) return;
 	}
 
 	void saveMask(final RandomAccessibleInterval<?> img, final int tp) {
