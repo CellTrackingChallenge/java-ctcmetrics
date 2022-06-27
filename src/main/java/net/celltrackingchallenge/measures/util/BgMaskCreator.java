@@ -6,9 +6,6 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.Collection;
 import java.util.TreeSet;
-
-import org.scijava.Context;
-import org.scijava.log.LogService;
 import org.scijava.log.Logger;
 
 public class BgMaskCreator {
@@ -148,7 +145,7 @@ public class BgMaskCreator {
 		final Builder b = new Builder()
 				.setupForCTC(Paths.get(mainFolder),digits,erosion)
 				.forTheseTimepointsOnly(tps)
-				.setSciJavaLogger(new Context(LogService.class).getService(LogService.class));
+				.setSciJavaLogger(new SimpleConsoleLogger());
 		if (args.length == 5) b.findMaskValidForAllTimepoints();
 		else b.createIndividualMaskForEachTimepoint();
 
