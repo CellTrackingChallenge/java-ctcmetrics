@@ -245,9 +245,19 @@ public class BgMaskCreator {
 		Erosion.erode(inImg,outImg,postProcessingSE,10);
 	}
 
-	void saveMask(final RandomAccessibleInterval<?> img, final int tp) {
+	void saveMask(final RandomAccessibleInterval<? extends IntegerType<?>> img, final int tp) {
 		final String filename = String.format(outputFilesPattern,tp);
 		SimplifiedIO.saveImage(img, filename);
 		logger.info("Saved BGmask: "+filename);
+
+		bgCounter[0] = 0;
+		LoopBuilder.setImages(img).forEachPixel(p -> { if (p.getInteger() > 0) bgCounter[0]++; });
+
+		long pxSize = 1;
+		for (int d = 0; d < img.numDimensions(); ++d) pxSize *= img.dimension(d);
+		logger.info("... with "+bgCounter[0]+ " voxels in the mask -> "
+				+(100*bgCounter[0]/pxSize)+"% coverage");
 	}
+
+	final long[] bgCounter = new long[1];
 }
