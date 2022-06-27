@@ -1,12 +1,25 @@
 package net.celltrackingchallenge.measures.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Set;
 import java.util.Collection;
 import java.util.TreeSet;
+
+import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.algorithm.morphology.Erosion;
+import net.imglib2.algorithm.neighborhood.HyperSphereShape;
+
 import org.scijava.log.Logger;
+import sc.fiji.simplifiedio.SimplifiedIO;
+import net.celltrackingchallenge.measures.TrackDataCache;
 
 public class BgMaskCreator {
 	//params - data specs (in CTC context):
@@ -149,15 +162,63 @@ public class BgMaskCreator {
 		if (args.length == 5) b.findMaskValidForAllTimepoints();
 		else b.createIndividualMaskForEachTimepoint();
 
-		b.build().run();
+		try {
+			b.build().run();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 
-	public void run() {
+	public void run() throws IOException {
 		logger.info("Getting masks for files: "+inputFilesPattern);
 		logger.info("... for timepoints: "+timepoints);
 		logger.info("... with One mask for all: "+doMaskValidForAllTPs);
 		logger.info("... with erosion width: "+widthOfPostProcessingErosion);
 		logger.info("Saving masks as: "+outputFilesPattern);
+		logger.info("-------------");
+
+		final TrackDataCache loader = new TrackDataCache(logger);
+		Img<UnsignedByteType> bgImg = null;
+
+		for (int tp : timepoints) {
+			//load input
+			Img<UnsignedShortType> fgImg = loader.ReadImageG16(String.format(inputFilesPattern, tp));
+
+			//setup output
+			if (bgImg == null) {
+				bgImg = fgImg.factory().imgFactory(new UnsignedByteType()).create(fgImg);
+				LoopBuilder.setImages(bgImg).forEachPixel(UnsignedByteType::setOne);
+				//NB: we gonna be clearing pixels where fg has some label
+			}
+			LoopBuilder.setImages(fgImg,bgImg).forEachPixel((fg,bg) -> { if (fg.getInteger() > 0) bg.setZero(); });
+
+			if (!doMaskValidForAllTPs) {
+				postProcessMask(bgImg);
+				saveMask(bgImg,tp);
+				LoopBuilder.setImages(bgImg).forEachPixel(UnsignedByteType::setOne);
+			}
+		}
+
+		if (doMaskValidForAllTPs) {
+			postProcessMask(bgImg);
+			//saves the first time point
+			saveMask(bgImg, timepoints.iterator().next());
+			//or
+			//saves all the timepoints
+			//for (int tp : timepoints) saveMask(bgImg, tp);
+		}
+	}
+
+	<T extends IntegerType<T>> void postProcessMask(final Img<T> img) {
+		if (widthOfPostProcessingErosion == 0) return;
+		logger.info("Going to post process, width = "+widthOfPostProcessingErosion);
+		Erosion.erode(img,new HyperSphereShape(widthOfPostProcessingErosion),10);
+	}
+
+	void saveMask(final RandomAccessibleInterval<?> img, final int tp) {
+		final String filename = String.format(outputFilesPattern,tp);
+		SimplifiedIO.saveImage(img, filename);
+		logger.info("Saved BGmask: "+filename);
 	}
 }
