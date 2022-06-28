@@ -74,7 +74,7 @@ public class NumberSequenceHandler
 
 
 	/** Parses the input 'inStr' and returns an expanded set that corresponds
-	    to the (succint) string input. */
+	    to the (succinct) string input. */
 	public static
 	TreeSet<Integer> toSet(final String inStr)
 	{
@@ -85,13 +85,13 @@ public class NumberSequenceHandler
 		}
 		catch (ParseException e)
 		{
-			throw new RuntimeException(e.getMessage());
+			throw new RuntimeException(e.getMessage(),e);
 		}
 	}
 
 
 	/** Parses the input 'inStr' and adds to the 'outList' an expanded set
-	    that corresponds to the (succint) string input. Note the output
+	    that corresponds to the (succinct) string input. Note the output
 	    is not explicitly cleared in this method. */
 	public static
 	void toSet(final String inStr, final Set<Integer> outList)
@@ -101,7 +101,7 @@ public class NumberSequenceHandler
 		}
 		catch (ParseException e)
 		{
-			throw new RuntimeException(e.getMessage());
+			throw new RuntimeException(e.getMessage(),e);
 		}
 	}
 	// -------------------------------------------------------------------------
