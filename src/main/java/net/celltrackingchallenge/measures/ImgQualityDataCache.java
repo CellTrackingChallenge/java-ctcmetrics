@@ -586,9 +586,10 @@ public class ImgQualityDataCache
 		data.nearDistFG.add( new HashMap<>() );
 
 		final MutualFgDistances fgDists = new MutualFgDistances(imgFG.numDimensions());
-		if (doDensityPrecalculation)
+		if (doDensityPrecalculation && bboxes.size() > 1)
 		{
-			//get all boundary pixels
+			//if there are at least two markers (and thus measuring density does make sense at all),
+			//do get all boundary pixels then...
 			for (int marker : bboxes.keySet())
 			{
 				log.trace("Discovering surface for a marker "+marker);
@@ -630,9 +631,12 @@ public class ImgQualityDataCache
 								: computeCircularity(marker,viewFgCurr,viewBinTmp) );
 			}
 
-			if (doDensityPrecalculation)
-				data.nearDistFG.get(time).put( marker,
-						fgDists.getDistance(marker, fgDists.getClosestNeighbor(marker)) );
+			if (doDensityPrecalculation) {
+				final int closestMarker = fgDists.getClosestNeighbor(marker);
+				//record distance only! if some neighbor is found
+				if (closestMarker > 0) data.nearDistFG.get(time).put( marker,
+						fgDists.getDistance(marker, closestMarker) );
+			}
 		}
 	}
 
