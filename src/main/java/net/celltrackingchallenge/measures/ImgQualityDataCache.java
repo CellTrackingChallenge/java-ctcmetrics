@@ -454,6 +454,15 @@ public class ImgQualityDataCache
 		}
 	}
 
+	private boolean isBoxLargeEnoughForSha(final int[] bbox)
+	{
+		int minL = 2; //size of at least 2px in some axis is considered to be good enough
+		final int D = bbox.length / 2;
+		for (int d = 0; d < D; ++d)
+			minL = Math.min(minL, bbox[d+D]-bbox[d]+1);
+		return minL >= 2;
+	}
+
 
 	public <T extends RealType<T>>
 	void ClassifyLabels(final int time,
@@ -625,10 +634,13 @@ public class ImgQualityDataCache
 
 			if (doShapePrecalculation)
 			{
-				final IntervalView<BitType> viewBinTmp = Views.interval(fgBinaryTmp, reducedView);
-				data.shaValuesFG.get(time).put( marker,
-						doSphericity ? computeSphericity(marker,viewFgCurr,viewBinTmp)
-								: computeCircularity(marker,viewFgCurr,viewBinTmp) );
+				if (isBoxLargeEnoughForSha(bboxes.get(marker))) {
+					final IntervalView<BitType> viewBinTmp = Views.interval(fgBinaryTmp, reducedView);
+					data.shaValuesFG.get(time).put(marker,
+							doSphericity ? computeSphericity(marker, viewFgCurr, viewBinTmp)
+									: computeCircularity(marker, viewFgCurr, viewBinTmp));
+				} else
+					log.trace("Marker "+marker+" too small for Sha, bbox = "+ Arrays.toString(bboxes.get(marker)));
 			}
 
 			if (doDensityPrecalculation) {
