@@ -56,6 +56,9 @@ public class DEN extends AbstractDSmeasure
 			//shadows of the/short-cuts to the cache data
 			final Vector<HashMap<Integer,Float>> nearDistFG = data.nearDistFG;
 
+			//how many frames contain less than two cells (and are excluded from the stats)
+			long noOfBoringFrames = 0;
+
 			//number of objects whose neighbors were not found (within the distance)
 			long noIsolatedFGs = 0;
 
@@ -73,6 +76,8 @@ public class DEN extends AbstractDSmeasure
 					++noFGs;
 					if (dist >= 50.0) ++noIsolatedFGs;
 				}
+
+				if (nearDistFG.get(time).isEmpty()) ++noOfBoringFrames;
 			}
 
 			//finish the calculation of the average
@@ -80,6 +85,8 @@ public class DEN extends AbstractDSmeasure
 			{
 				log.info("DEN for video "+data.video+": There is "+noIsolatedFGs+" ( "+100.0*noIsolatedFGs/(double)noFGs
 					+" %) cells with no neighbor in the range of 50 voxels.");
+				log.info("DEN for video "+data.video+": There is "+noOfBoringFrames+" ( "+100.0*noOfBoringFrames/(double)nearDistFG.size()
+					+" %) frames with zero or one cell.");
 				log.info("DEN for video "+data.video+": "+l_den/(double)noFGs);
 
 				den += l_den;
