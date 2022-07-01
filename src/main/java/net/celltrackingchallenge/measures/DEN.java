@@ -71,7 +71,7 @@ public class DEN extends AbstractDSmeasure
 				{
 					l_den += (double)dist;
 					++noFGs;
-					if (dist == 50.0) ++noIsolatedFGs;
+					if (dist >= 50.0) ++noIsolatedFGs;
 				}
 			}
 
