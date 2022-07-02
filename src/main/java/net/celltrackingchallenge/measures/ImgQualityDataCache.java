@@ -377,8 +377,13 @@ public class ImgQualityDataCache
 		}
 
 		log.trace("marker "+fgValue+" area is "+ops.geom().size(p));
-		log.trace("marker "+fgValue+" perimeter is "+ops.geom().boundarySize(p));
+		final double perimeter = ops.geom().boundarySize(p).getRealDouble();
+		log.trace("marker "+fgValue+" perimeter is "+perimeter);
 		log.debug("Circularity of a marker "+fgValue+" is "+ops.geom().circularity(p).getRealDouble());
+		if (perimeter < 0.0001) {
+			log.info("marker "+fgValue+" PROBLEMATIC SHA, returning fake value of 0.5");
+			return 0.5;
+		}
 		return ops.geom().circularity(p).getRealDouble();
 	}
 
