@@ -32,10 +32,10 @@ import org.scijava.log.Logger;
 import java.util.Vector;
 import java.util.HashMap;
 
-public class DEN extends AbstractDSmeasure
+public class SPA extends AbstractDSmeasure
 {
 	///a constructor requiring connection to Fiji report/log services
-	public DEN(final Logger _log)
+	public SPA(final Logger _log)
 	{ super(_log); }
 
 
