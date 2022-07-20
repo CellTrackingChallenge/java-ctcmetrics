@@ -40,17 +40,17 @@ public class SPA extends AbstractDSmeasure
 
 
 	//---------------------------------------------------------------------/
-	/// This is the main DEN calculator.
+	/// This is the main SPA calculator.
 	@Override
 	protected double calculateBottomStage()
 	{
 		//do the bottom stage
-		//DEBUG//log.info("Computing the DEN bottom part...");
-		double den = 0.0;
+		//DEBUG//log.info("Computing the SPA bottom part...");
+		double spa = 0.0;
 		long fgCnt = 0; //how many videos were processed
 
 		//go over all encountered videos and calc
-		//their respective avg. DENs and average them
+		//their respective avg. SPAs and average them
 		for (ImgQualityDataCache.videoDataContainer data : cache.cachedVideoData)
 		{
 			//shadows of the/short-cuts to the cache data
@@ -62,9 +62,9 @@ public class SPA extends AbstractDSmeasure
 			//number of objects whose neighbors were not found (within the distance)
 			long noIsolatedFGs = 0;
 
-			//go over all FG objects and calc their DENs
+			//go over all FG objects and calc their SPAs
 			long noFGs = 0;
-			double l_den = 0.;
+			double l_spa = 0.;
 
 			//over all time points
 			for (int time=0; time < nearDistFG.size(); ++time)
@@ -72,7 +72,7 @@ public class SPA extends AbstractDSmeasure
 				//over all objects, in fact use their avg intensities
 				for (Float dist : nearDistFG.get(time).values())
 				{
-					l_den += (double)dist;
+					l_spa += (double)dist;
 					++noFGs;
 					if (dist >= 50.0) ++noIsolatedFGs;
 				}
@@ -83,28 +83,28 @@ public class SPA extends AbstractDSmeasure
 			//finish the calculation of the average
 			if (noFGs > 0)
 			{
-				log.info("DEN for video "+data.video+": There is "+noIsolatedFGs+" ( "+100.0*noIsolatedFGs/(double)noFGs
+				log.info("SPA for video "+data.video+": There is "+noIsolatedFGs+" ( "+100.0*noIsolatedFGs/(double)noFGs
 					+" %) cells with no neighbor in the range of 50 voxels.");
-				log.info("DEN for video "+data.video+": There is "+noOfBoringFrames+" ( "+100.0*noOfBoringFrames/(double)nearDistFG.size()
+				log.info("SPA for video "+data.video+": There is "+noOfBoringFrames+" ( "+100.0*noOfBoringFrames/(double)nearDistFG.size()
 					+" %) frames with zero or one cell.");
-				log.info("DEN for video "+data.video+": "+l_den/(double)noFGs);
+				log.info("SPA for video "+data.video+": "+l_spa/(double)noFGs);
 
-				den += l_den;
+				spa += l_spa;
 				fgCnt += noFGs;
 			}
 			else
-				log.info("DEN for video "+data.video+": Couldn't calculate average DEN because there are no cells labelled.");
+				log.info("SPA for video "+data.video+": Couldn't calculate average SPA because there are no cells labelled.");
 		}
 
 		//summarize over all datasets:
 		if (fgCnt > 0)
 		{
-			den /= (double)fgCnt;
-			log.info("DEN for dataset: "+den);
+			spa /= (double)fgCnt;
+			log.info("SPA for dataset: "+spa);
 		}
 		else
-			log.info("DEN for dataset: Couldn't calculate average DEN because there are missing labels.");
+			log.info("SPA for dataset: Couldn't calculate average SPA because there are missing labels.");
 
-		return (den);
+		return (spa);
 	}
 }
