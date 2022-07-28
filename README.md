@@ -5,7 +5,7 @@ In particular, one can find here:
 
 * Technical (developer-oriented) tracking and segmentation measures: TRA, SEG, DET
 * Biological (user-oriented) measures: CT, TF, BC(i), CCA
-* Dataset quality measures: SNR, CR, Hetb, Heti, Res, Sha, Den, Cha, Ove, Mit
+* Dataset quality measures: SNR, CR, Hetb, Heti, Res, Sha, Spa, Cha, Ove, Mit
 * Tracking accuracy evaluation with general [Acyclic Oriented Graphs Measure (AOGM)](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0144959)
 
 The measures were used in the paper [An objective comparison of cell-tracking algorithms](http://dx.doi.org/10.1038/nmeth.4473) and are,
@@ -104,3 +104,22 @@ shall return current manual on how to use the program. These are the parameters:
 - *onwMaskForAll*: if 5th parameter is given (can be any string), the BG mask is a complement of the union of all foreground segments
                  *across* all time points; the program then produces only one file!
 
+#### Dataset Measure from Command Line
+This is probably the easiest achieved by operating the Fiji in the head-less mode (that is without the GUI):
+
+```
+Fiji.app/ImageJ-linux64 --headless --run "Dataset measures" "imgPath=\"/fullPath/datasetMeasures/Fluo-N3DL-TRIF/01",annPath=\"/fullPath/datasetMeasures/Fluo-N3DL-TRIF/01_GT\",noOfDigits=3,xRes=1.0,yRes=1.0,zRes=1.0,doVerboseLogging=false,calcSNR=true,calcCR=true,calcHeti=true,calcHetb=true,calcRes=true,calcSha=true,calcSpa=true,calcCha=true,calcOve=true,calcMit=true" |tee log.txt
+```
+
+That example assumes the folders layout and content as described above, with the root folder being `/fullPath/datasetMeasures/Fluo-N3DL-TRIF`.
+Additionally it considers 3 digits are used to denote time points. The image resolution is isotropic. All ten measures should be computed.
+The log of the computation is not verbose and shall be displayed both on the screen/terminal as well as into a `log.txt` file.
+
+If one has multiple videos over which a common statistics shall be computed, the videos shall line up in the common root folder
+under names `01`, `02`, `03`... and then the command reads like this:
+
+```
+Fiji.app/ImageJ-linux64 --headless --run "Dataset measures" "imgPath=\"/fullPath/datasetMeasures/Fluo-N3DL-TRIF",annPath=\"/fullPath/datasetMeasures/Fluo-N3DL-TRIF\",noOfDigits=3,xRes=1.0,yRes=1.0,zRes=1.0,doVerboseLogging=false,calcSNR=true,calcCR=true,calcHeti=true,calcHetb=true,calcRes=true,calcSha=true,calcSpa=true,calcCha=true,calcOve=true,calcMit=true" |tee log.txt
+```
+
+It's exactly the same command as above except that the `imgPath` and `annPath` point on the root folder, not on any particular video.
