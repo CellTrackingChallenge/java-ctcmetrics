@@ -9,7 +9,7 @@
 
 	<groupId>net.celltrackingchallenge</groupId>
 	<artifactId>CTC-measures</artifactId>
-	<version>0.9.8-SNAPSHOT</version>
+	<version>1.0.1-SNAPSHOT</version>
 
 	<organization>
 		<name>The Cell Tracking Challenge</name>
@@ -123,6 +123,29 @@
 						<argument>rm -v '${project.build.outputDirectory}'/COMMITrev_*; touch '${project.build.outputDirectory}'/COMMITrev_${git.commit.id.abbrev};</argument>
 					</arguments>
 				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>net.celltrackingchallenge.measures.util.BgMaskCreator</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
