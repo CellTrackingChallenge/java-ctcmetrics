@@ -48,6 +48,7 @@ This is a maven project. You can make it available in your maven projects with t
 	</dependencies>
 ```
 
+
 Example
 -------
 [Here, one can find example of the API calls](https://github.com/CellTrackingChallenge/measures/blob/e4ac070475b7c50d0d89aecf3c4e74396437eda4/src/test/java/net/celltrackingchallenge/measures/TestMeasures.java#L74) to have the seven (TRA.... CCA) measures calculated over your data.
