@@ -80,3 +80,27 @@ DS measures to provide believable numbers, the foreground (and background too) m
 Here is an example of the expected files layout:
 
 ![Example of data layout](src/test/java/net/celltrackingchallenge/measures/DS_data.png)
+
+## BgMaskCreator
+This is, ATM only, a command-line tool to create the BG masks `BG/mask*.tif` from the `man_track*.tif` full-segments files.
+
+After building the full package with `mvn clean package`, a *fat jar* file `*-with-dependencies.jar` shall appear in the `target` subfolder.
+This file is directed to execute the [BgMaskCreator creator](https://github.com/CellTrackingChallenge/measures/blob/master/src/main/java/net/celltrackingchallenge/measures/util/BgMaskCreator.java).
+
+For example, calling
+
+```
+$ java -jar target/CTC-measures-0.9.8-SNAPSHOT-jar-with-dependencies.jar
+Expecting args: CTCfolder noOfDigits erosionWidth timepointsRange [onwMaskForAll]
+```
+
+shall return current manual on how to use the program. These are the parameters:
+
+- CTCfolder: the root folder with the data, e.g. `/home/ulman/CTC/DS_measures` from the example above
+- noOfDigits: how many digits are used in the filenames, typically this is 3, but some CTC datasets use 4
+- erosionWidth: after complement of the union of the foregound segments is computed (this is the BG mask), it is eroded with
+                a circular/spherical SE of the given radius in pixels; typical value is 5, 3 for TRIC, 0 to disable this functionality
+- timepointsRange: which files shall be used, examples: 0-9 defines first ten time points, also works 0,3,4,6-9,12,14-18,21
+- onwMaskForAll: if 5th parameter is given (can be any string), the BG mask is a complement of the union of all foreground segments
+                 *across* all time points; the program then produces only one file!
+
