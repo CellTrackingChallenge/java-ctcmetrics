@@ -82,7 +82,7 @@ Here is an example of the expected files layout:
 ![Example of data layout](src/test/java/net/celltrackingchallenge/measures/DS_data.png)
 
 #### BgMaskCreator
-This is, ATM only, a command-line tool to create the BG masks `BG/mask*.tif` from the `TRA/man_track*.tif` full-segments files.
+This is a tool to create the BG masks `BG/mask*.tif` from the `TRA/man_track*.tif` full-segments files.
 
 After building the full package with `mvn clean package`, a *fat jar* file `*-with-dependencies.jar` shall appear in the `target` subfolder.
 This file is directed to execute the [BgMaskCreator creator](https://github.com/CellTrackingChallenge/measures/blob/master/src/main/java/net/celltrackingchallenge/measures/util/BgMaskCreator.java).
@@ -103,8 +103,10 @@ shall return current manual on how to use the program. These are the parameters:
 - *timepointsRange*: which files shall be used, examples: 0-9 defines first ten time points, also works 0,3,4,6-9,12,14-18,21
 - *onwMaskForAll*: if 5th parameter is given (can be any string), the BG mask is a complement of the union of all foreground segments
                  *across* all time points; the program then produces only one file!
+		 
+Alternatively, one can find this functionality in Fiji, in Plugins -> Cell Tracking Challenge -> Create BG Masks. Don't forget to **enable the Fiji update site `CellTrackingChallenge`**.
 
-#### Dataset Measure from Command Line
+#### Dataset Measures from Command Line
 This is probably the easiest achieved by operating the Fiji in the head-less mode (that is without the GUI):
 
 ```
@@ -123,3 +125,5 @@ Fiji.app/ImageJ-linux64 --headless --run "Dataset measures" "imgPath=\"/fullPath
 ```
 
 It's exactly the same command as above except that the `imgPath` and `annPath` point on the root folder, not on any particular video.
+
+Obviously, this piece has also its GUI Fiji counterpart.
