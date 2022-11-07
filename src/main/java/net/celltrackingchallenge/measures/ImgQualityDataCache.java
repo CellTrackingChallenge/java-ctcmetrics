@@ -170,7 +170,10 @@ public class ImgQualityDataCache
 	public class videoDataContainer
 	{
 		public videoDataContainer(final int __v)
-		{ video = __v; }
+		{
+			video = __v;
+			videoTable = new HashMap<>(3000); //keys are timepoints
+		}
 
 		///number/ID of the video this data belongs to
 		public int video;
@@ -226,6 +229,44 @@ public class ImgQualityDataCache
 		public final Vector<Double> avgBG = new Vector<>(1000,100);
 		/// Similar to this.avgBG
 		public final Vector<Double> stdBG = new Vector<>(1000,100);
+
+		final Map<Integer, Map<Integer,MeasuresTableRow>> videoTable;
+		//
+		public MeasuresTableRow getTableRowFor(final int timepoint, final int cellID)
+		{
+			videoTable.putIfAbsent(timepoint, new HashMap<>(5000));
+			final Map<Integer,MeasuresTableRow> tableAtTime = videoTable.get(timepoint);
+
+			MeasuresTableRow row = tableAtTime.getOrDefault(cellID, null);
+			if (row == null) {
+				row = new MeasuresTableRow("ds","vid", timepoint, cellID);
+				tableAtTime.put(cellID, row);
+			}
+
+			return row;
+		}
+	}
+
+	public static class MeasuresTableRow
+	{
+		public MeasuresTableRow(
+				final String datasetName, final String videoSequence,
+				final int timePoint, final int cellTraId)
+		{
+			this.datasetName = datasetName;
+			this.videoSequence = videoSequence;
+			this.timePoint = timePoint;
+			this.cellTraId = cellTraId;
+		}
+
+		//row key-identifier
+		public final String datasetName;
+		public final String videoSequence;
+		public final int timePoint;
+		public final int cellTraId;
+
+		//row data
+		public double snr, cr, heti, hetb, res, sha, spa, cha, ove, mit;
 	}
 
 	/// this list holds relevant data for every discovered video
