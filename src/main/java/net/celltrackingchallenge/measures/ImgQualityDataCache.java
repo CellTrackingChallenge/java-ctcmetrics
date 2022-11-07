@@ -57,12 +57,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import io.scif.img.ImgIOException;
 
-import java.util.Arrays;
 import java.util.Map;
-import java.util.Vector;
 import java.util.HashMap;
+import java.util.Vector;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class ImgQualityDataCache
 {
@@ -297,6 +299,26 @@ public class ImgQualityDataCache
 
 	/// this list holds relevant data for every discovered video
 	List<videoDataContainer> cachedVideoData = new LinkedList<>();
+
+	public Collection<MeasuresTableRow> getMeasuresTable()
+	{
+		//estimated how many rows will the table have
+		int noOfTableLines = 0;
+		for (videoDataContainer video : cachedVideoData) {
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+				noOfTableLines += timepoint.size();
+			}
+		}
+
+		final List<MeasuresTableRow> concatenatedTable = new ArrayList<>(noOfTableLines);
+		for (videoDataContainer video : cachedVideoData) {
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+				concatenatedTable.addAll(timepoint.values());
+			}
+		}
+
+		return concatenatedTable;
+	}
 
 	//---------------------------------------------------------------------/
 	//aux data fillers -- merely markers' properties calculator
