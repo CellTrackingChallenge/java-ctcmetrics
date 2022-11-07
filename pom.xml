@@ -70,8 +70,7 @@
 		<url>http://github.com/CellTrackingChallenge/measures/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Travis CI</system>
-		<url>https://travis-ci.com/CellTrackingChallenge/measures</url>
+		<system>none</system>
 	</ciManagement>
 
 	<distributionManagement>
