@@ -59,6 +59,8 @@ import io.scif.img.ImgIOException;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.Vector;
 import java.util.List;
 import java.util.ArrayList;
@@ -314,6 +316,33 @@ public class ImgQualityDataCache
 		for (videoDataContainer video : cachedVideoData) {
 			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
 				concatenatedTable.addAll(timepoint.values());
+			}
+		}
+
+		return concatenatedTable;
+	}
+
+	public Collection<MeasuresTableRow> getMeasuresTable_GroupedByCellsThenByVideos()
+	{
+		//estimated how many rows will the table have
+		int noOfTableLines = 0;
+		for (videoDataContainer video : cachedVideoData) {
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+				noOfTableLines += timepoint.size();
+			}
+		}
+
+		final List<MeasuresTableRow> concatenatedTable = new ArrayList<>(noOfTableLines);
+		for (videoDataContainer video : cachedVideoData) {
+			Set<Integer> discoveredIds = new HashSet<>(3000);
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values())
+				discoveredIds.addAll(timepoint.keySet());
+
+			for (int cellId : discoveredIds) {
+				for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+					if (timepoint.containsKey(cellId))
+						concatenatedTable.add(timepoint.get(cellId));
+				}
 			}
 		}
 
