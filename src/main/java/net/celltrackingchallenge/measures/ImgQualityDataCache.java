@@ -169,10 +169,16 @@ public class ImgQualityDataCache
 	 */
 	public class videoDataContainer
 	{
-		public videoDataContainer(final int __v)
+		public videoDataContainer(final String __imgPath, final int __v)
 		{
 			video = __v;
+
 			videoTable = new HashMap<>(3000); //keys are timepoints
+			videoNameStr = Integer.valueOf(__v).toString();
+			//
+			//extract dataset name
+			final int idx = __imgPath.lastIndexOf('/');
+			datasetNameStr = idx > -1 ? __imgPath.substring(idx+1) : __imgPath;
 		}
 
 		///number/ID of the video this data belongs to
@@ -231,6 +237,7 @@ public class ImgQualityDataCache
 		public final Vector<Double> stdBG = new Vector<>(1000,100);
 
 		final Map<Integer, Map<Integer,MeasuresTableRow>> videoTable;
+		final String datasetNameStr, videoNameStr;
 		//
 		public MeasuresTableRow getTableRowFor(final int timepoint, final int cellID)
 		{
@@ -239,7 +246,7 @@ public class ImgQualityDataCache
 
 			MeasuresTableRow row = tableAtTime.getOrDefault(cellID, null);
 			if (row == null) {
-				row = new MeasuresTableRow("ds","vid", timepoint, cellID);
+				row = new MeasuresTableRow(datasetNameStr, videoNameStr, timepoint, cellID);
 				tableAtTime.put(cellID, row);
 			}
 
@@ -730,7 +737,7 @@ public class ImgQualityDataCache
 			while (Files.isDirectory( Paths.get(imgPath,(video > 9 ? String.valueOf(video) : "0"+video)) ))
 			{
 				log = backupOriginalLog.subLogger("video 0"+video);
-				final videoDataContainer data = new videoDataContainer(video);
+				final videoDataContainer data = new videoDataContainer(imgPath, video);
 				calculateVideo(String.format("%s/%02d",imgPath,video),
 				               String.format("%s/%02d_GT",annPath,video), data);
 				this.cachedVideoData.add(data);
@@ -741,7 +748,7 @@ public class ImgQualityDataCache
 		else
 		{
 			//single video situation
-			final videoDataContainer data = new videoDataContainer(1);
+			final videoDataContainer data = new videoDataContainer(imgPath, 1);
 			calculateVideo(imgPath,annPath,data);
 			this.cachedVideoData.add(data);
 		}
