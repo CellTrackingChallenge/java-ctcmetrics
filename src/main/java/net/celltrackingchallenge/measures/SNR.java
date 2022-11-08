@@ -73,8 +73,8 @@ public class SNR extends AbstractDSmeasure
 				for (Map.Entry<Integer,Double> aCellAndItsParam : avgFG.get(time).entrySet())
 				{
 					final double one_snr = Math.abs(aCellAndItsParam.getValue() - avgBG.get(time)) / stdBG.get(time);
-					l_snr += one_snr;
 					data.getTableRowFor(time, aCellAndItsParam.getKey()).snr = one_snr;
+					l_snr += one_snr;
 					++noFGs;
 				}
 			}
