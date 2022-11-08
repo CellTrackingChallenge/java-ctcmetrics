@@ -29,6 +29,7 @@ package net.celltrackingchallenge.measures;
 
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -97,6 +98,11 @@ public class CHA extends AbstractDSmeasure
 				a = avgFGfromTimeSpan(0,0,avgFG);
 				b = avgFGfromTimeSpan(1,1,avgFG);
 				l_cha = b - a;
+
+				for (int cell_id : avgFG.get(0).keySet())
+					data.getTableRowFor(0, cell_id).cha = a;
+				for (int cell_id : avgFG.get(1).keySet())
+					data.getTableRowFor(1, cell_id).cha = b;
 			}
 			else
 			{
@@ -107,6 +113,11 @@ public class CHA extends AbstractDSmeasure
 				b = avgFGfromTimeSpan(last-1,last,avgFG);
 				l_cha = b - a;
 				l_cha /= (double)last;
+
+				for (int cell_id : avgFG.get(0).keySet())
+					data.getTableRowFor(0, cell_id).cha = a;
+				for (int cell_id : avgFG.get(last).keySet())
+					data.getTableRowFor(last, cell_id).cha = b;
 			}
 
 			if (a < 0.0 || b < 0.0)
