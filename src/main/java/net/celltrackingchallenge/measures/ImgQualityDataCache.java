@@ -279,9 +279,27 @@ public class ImgQualityDataCache
 		//row data
 		public double snr, cr, heti, hetb, res, sha, spa, cha, ove, mit;
 
+		final static String sep = "; ";
+
+		public static String printHeader() {
+			return "# datasetName" + sep
+					+ "videoSequence" + sep
+					+ "timePoint" + sep
+					+ "cellTraId" + sep
+					+ "snr" + sep
+					+ "cr" + sep
+					+ "heti" + sep
+					+ "hetb" + sep
+					+ "res" + sep
+					+ "sha" + sep
+					+ "spa" + sep
+					+ "cha" + sep
+					+ "ove" + sep
+					+ "mit";
+		}
+
 		@Override
 		public String toString() {
-			final String sep = "; ";
 			return datasetName + sep
 					+ videoSequence + sep
 					+ timePoint + sep
