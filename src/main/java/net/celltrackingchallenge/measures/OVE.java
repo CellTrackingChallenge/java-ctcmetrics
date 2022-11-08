@@ -67,7 +67,9 @@ public class OVE extends AbstractDSmeasure
 				//over all objects
 				for (Integer fgID : overlapFG.get(time).keySet())
 				{
-					l_ove += (double)overlapFG.get(time).get(fgID) / (double)volumeFG.get(time).get(fgID);
+					final double one_ove = (double)overlapFG.get(time).get(fgID) / (double)volumeFG.get(time).get(fgID);
+					data.getTableRowFor(time, fgID).ove = one_ove;
+					l_ove += one_ove;
 					++noFGs;
 				}
 			}

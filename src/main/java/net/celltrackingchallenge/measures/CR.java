@@ -29,6 +29,7 @@ package net.celltrackingchallenge.measures;
 
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -67,9 +68,11 @@ public class CR extends AbstractDSmeasure
 				if (avgBG.get(time) == 0.0) continue;
 
 				//over all objects, in fact use their avg intensities
-				for (Double fg : avgFG.get(time).values())
+				for (Map.Entry<Integer,Double> aCellAndItsParam : avgFG.get(time).entrySet())
 				{
-					l_cr += fg / avgBG.get(time);
+					final double one_cr = aCellAndItsParam.getValue() / avgBG.get(time);
+					data.getTableRowFor(time, aCellAndItsParam.getKey()).cr = one_cr;
+					l_cr += one_cr;
 					++noFGs;
 				}
 			}
