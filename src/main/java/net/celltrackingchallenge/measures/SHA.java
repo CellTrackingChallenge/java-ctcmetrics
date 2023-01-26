@@ -30,6 +30,7 @@ package net.celltrackingchallenge.measures;
 import net.imagej.ops.OpService;
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -64,8 +65,10 @@ public class SHA extends AbstractDSmeasure
 			for (int time=0; time < shaValuesFG.size(); ++time)
 			{
 				//over all objects
-				for (double val : shaValuesFG.get(time).values())
+				for (Map.Entry<Integer,Double> aCellAndItsParam : shaValuesFG.get(time).entrySet())
 				{
+					final double val = aCellAndItsParam.getValue();
+					data.getTableRowFor(time, aCellAndItsParam.getKey()).sha = val;
 					l_sha += val;
 					++noFGs;
 				}

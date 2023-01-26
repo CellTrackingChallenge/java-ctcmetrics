@@ -58,7 +58,7 @@ public class HETI extends AbstractDSmeasure
 			final Vector<HashMap<Integer,Double>> stdFG = data.stdFG;
 			final Vector<Double> avgBG = data.avgBG;
 
-			//go over all FG objects and calc their CRs
+			//go over all FG objects and calc their HETIs
 			long noFGs = 0;
 			double l_heti = 0.0;
 			//over all time points
@@ -71,7 +71,9 @@ public class HETI extends AbstractDSmeasure
 					//exclude close-to-zero denominators (that otherwise escalate/outlay the average)
 					if (denom > 0.01)
 					{
-						l_heti += stdFG.get(time).get(fgID) / denom;
+						final double one_heti = stdFG.get(time).get(fgID) / denom;
+						data.getTableRowFor(time, fgID).heti = one_heti;
+						l_heti += one_heti;
 						++noFGs;
 					}
 				}

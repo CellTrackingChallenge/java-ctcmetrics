@@ -57,12 +57,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import io.scif.img.ImgIOException;
 
-import java.util.Arrays;
 import java.util.Map;
-import java.util.Vector;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Vector;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class ImgQualityDataCache
 {
@@ -169,8 +173,17 @@ public class ImgQualityDataCache
 	 */
 	public class videoDataContainer
 	{
-		public videoDataContainer(final int __v)
-		{ video = __v; }
+		public videoDataContainer(final String __imgPath, final int __v)
+		{
+			video = __v;
+
+			videoTable = new HashMap<>(3000); //keys are timepoints
+			videoNameStr = Integer.valueOf(__v).toString();
+			//
+			//extract dataset name
+			final int idx = __imgPath.lastIndexOf('/');
+			datasetNameStr = idx > -1 ? __imgPath.substring(idx+1) : __imgPath;
+		}
 
 		///number/ID of the video this data belongs to
 		public int video;
@@ -226,10 +239,133 @@ public class ImgQualityDataCache
 		public final Vector<Double> avgBG = new Vector<>(1000,100);
 		/// Similar to this.avgBG
 		public final Vector<Double> stdBG = new Vector<>(1000,100);
+
+		final Map<Integer, Map<Integer,MeasuresTableRow>> videoTable;
+		final String datasetNameStr, videoNameStr;
+		//
+		public MeasuresTableRow getTableRowFor(final int timepoint, final int cellID)
+		{
+			videoTable.putIfAbsent(timepoint, new HashMap<>(5000));
+			final Map<Integer,MeasuresTableRow> tableAtTime = videoTable.get(timepoint);
+
+			MeasuresTableRow row = tableAtTime.getOrDefault(cellID, null);
+			if (row == null) {
+				row = new MeasuresTableRow(datasetNameStr, videoNameStr, timepoint, cellID);
+				tableAtTime.put(cellID, row);
+			}
+
+			return row;
+		}
+	}
+
+	public static class MeasuresTableRow
+	{
+		public MeasuresTableRow(
+				final String datasetName, final String videoSequence,
+				final int timePoint, final int cellTraId)
+		{
+			this.datasetName = datasetName;
+			this.videoSequence = videoSequence;
+			this.timePoint = timePoint;
+			this.cellTraId = cellTraId;
+		}
+
+		//row key-identifier
+		public final String datasetName;
+		public final String videoSequence;
+		public final int timePoint;
+		public final int cellTraId;
+
+		//row data
+		public double snr, cr, heti, hetb, res, sha, spa, cha, ove, mit;
+
+		final static String sep = "; ";
+
+		public static String printHeader() {
+			return "# datasetName" + sep
+					+ "videoSequence" + sep
+					+ "timePoint" + sep
+					+ "cellTraId" + sep
+					+ "snr" + sep
+					+ "cr" + sep
+					+ "heti" + sep
+					+ "hetb" + sep
+					+ "res" + sep
+					+ "sha" + sep
+					+ "spa" + sep
+					+ "cha" + sep
+					+ "ove" + sep
+					+ "mit";
+		}
+
+		@Override
+		public String toString() {
+			return datasetName + sep
+					+ videoSequence + sep
+					+ timePoint + sep
+					+ cellTraId + sep
+					+ snr + sep
+					+ cr + sep
+					+ heti + sep
+					+ hetb + sep
+					+ res + sep
+					+ sha + sep
+					+ spa + sep
+					+ cha + sep
+					+ ove + sep
+					+ mit;
+		}
 	}
 
 	/// this list holds relevant data for every discovered video
 	List<videoDataContainer> cachedVideoData = new LinkedList<>();
+
+	public Collection<MeasuresTableRow> getMeasuresTable()
+	{
+		//estimated how many rows will the table have
+		int noOfTableLines = 0;
+		for (videoDataContainer video : cachedVideoData) {
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+				noOfTableLines += timepoint.size();
+			}
+		}
+
+		final List<MeasuresTableRow> concatenatedTable = new ArrayList<>(noOfTableLines);
+		for (videoDataContainer video : cachedVideoData) {
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+				concatenatedTable.addAll(timepoint.values());
+			}
+		}
+
+		return concatenatedTable;
+	}
+
+	public Collection<MeasuresTableRow> getMeasuresTable_GroupedByCellsThenByVideos()
+	{
+		//estimated how many rows will the table have
+		int noOfTableLines = 0;
+		for (videoDataContainer video : cachedVideoData) {
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+				noOfTableLines += timepoint.size();
+			}
+		}
+
+		final List<MeasuresTableRow> concatenatedTable = new ArrayList<>(noOfTableLines);
+		for (videoDataContainer video : cachedVideoData) {
+			Set<Integer> discoveredIds = new HashSet<>(3000);
+			for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values())
+				discoveredIds.addAll(timepoint.keySet());
+
+			for (int cellId : discoveredIds) {
+				for (Map<Integer,MeasuresTableRow> timepoint : video.videoTable.values()) {
+					if (timepoint.containsKey(cellId))
+						concatenatedTable.add(timepoint.get(cellId));
+				}
+			}
+		}
+
+		return concatenatedTable;
+	}
 
 	//---------------------------------------------------------------------/
 	//aux data fillers -- merely markers' properties calculator
@@ -689,7 +825,7 @@ public class ImgQualityDataCache
 			while (Files.isDirectory( Paths.get(imgPath,(video > 9 ? String.valueOf(video) : "0"+video)) ))
 			{
 				log = backupOriginalLog.subLogger("video 0"+video);
-				final videoDataContainer data = new videoDataContainer(video);
+				final videoDataContainer data = new videoDataContainer(imgPath, video);
 				calculateVideo(String.format("%s/%02d",imgPath,video),
 				               String.format("%s/%02d_GT",annPath,video), data);
 				this.cachedVideoData.add(data);
@@ -700,7 +836,7 @@ public class ImgQualityDataCache
 		else
 		{
 			//single video situation
-			final videoDataContainer data = new videoDataContainer(1);
+			final videoDataContainer data = new videoDataContainer(imgPath, 1);
 			calculateVideo(imgPath,annPath,data);
 			this.cachedVideoData.add(data);
 		}

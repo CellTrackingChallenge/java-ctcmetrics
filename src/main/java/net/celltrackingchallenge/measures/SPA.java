@@ -29,6 +29,7 @@ package net.celltrackingchallenge.measures;
 
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -70,9 +71,11 @@ public class SPA extends AbstractDSmeasure
 			for (int time=0; time < nearDistFG.size(); ++time)
 			{
 				//over all objects, in fact use their avg intensities
-				for (Float dist : nearDistFG.get(time).values())
+				for (Map.Entry<Integer,Float> aCellAndItsParam : nearDistFG.get(time).entrySet())
 				{
-					l_spa += (double)dist;
+					final double dist = aCellAndItsParam.getValue();
+					data.getTableRowFor(time, aCellAndItsParam.getKey()).spa = dist;
+					l_spa += dist;
 					++noFGs;
 					if (dist >= 50.0) ++noIsolatedFGs;
 				}

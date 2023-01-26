@@ -29,6 +29,7 @@ package net.celltrackingchallenge.measures;
 
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -79,12 +80,13 @@ public class HETB extends AbstractDSmeasure
 				frameAvgFGSignal /= (double)avgFG.get(time).size();
 
 				//over all objects, in fact use their avg intensities
-				for (Double fg : avgFG.get(time).values())
+				for (Map.Entry<Integer,Double> aCellAndItsParam : avgFG.get(time).entrySet())
 				{
 					//object signal height "normalized" with respect to the
 					//usual signal height in this frame, we have to calculate
 					//std.dev. from these values
-					l_hetb = (fg - avgBG.get(time)) / frameAvgFGSignal;
+					l_hetb = (aCellAndItsParam.getValue() - avgBG.get(time)) / frameAvgFGSignal;
+					data.getTableRowFor(time, aCellAndItsParam.getKey()).hetb = l_hetb;
 
 					if (valShift == -1) valShift = l_hetb;
 
@@ -94,7 +96,7 @@ public class HETB extends AbstractDSmeasure
 				}
 			}
 
-			//finish the calculation of the average
+			//finish the calculation of the (here!) variance (instead of the average as in the other measures)
 			if (noFGs > 0)
 			{
 				//finish calculation of the variance...

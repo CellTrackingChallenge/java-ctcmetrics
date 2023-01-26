@@ -29,6 +29,7 @@ package net.celltrackingchallenge.measures;
 
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -63,9 +64,11 @@ public class RES extends AbstractDSmeasure
 			for (int time=0; time < volumeFG.size(); ++time)
 			{
 				//over all objects
-				for (Long vol : volumeFG.get(time).values())
+				for (Map.Entry<Integer,Long> aCellAndItsParam : volumeFG.get(time).entrySet())
 				{
-					l_res += (double)vol;
+					final double vol = aCellAndItsParam.getValue();
+					data.getTableRowFor(time, aCellAndItsParam.getKey()).res = vol;
+					l_res += vol;
 					++noFGs;
 				}
 			}

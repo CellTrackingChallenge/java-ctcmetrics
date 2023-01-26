@@ -29,6 +29,7 @@ package net.celltrackingchallenge.measures;
 
 import org.scijava.log.Logger;
 
+import java.util.Map;
 import java.util.Vector;
 import java.util.HashMap;
 
@@ -69,9 +70,11 @@ public class SNR extends AbstractDSmeasure
 				if (stdBG.get(time) == 0.0) continue;
 
 				//over all objects, in fact use their avg intensities
-				for (Double fg : avgFG.get(time).values())
+				for (Map.Entry<Integer,Double> aCellAndItsParam : avgFG.get(time).entrySet())
 				{
-					l_snr += Math.abs(fg - avgBG.get(time)) / stdBG.get(time);
+					final double one_snr = Math.abs(aCellAndItsParam.getValue() - avgBG.get(time)) / stdBG.get(time);
+					data.getTableRowFor(time, aCellAndItsParam.getKey()).snr = one_snr;
+					l_snr += one_snr;
 					++noFGs;
 				}
 			}
