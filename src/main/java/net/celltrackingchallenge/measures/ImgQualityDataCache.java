@@ -404,7 +404,7 @@ public class ImgQualityDataCache
 		RandomAccess<T> inCursor = extImg.randomAccess();
 
 		boolean hasHit = false;
-		//DEBUG//int closestMarker = 0;
+		int closestMarker = 0;
 		float closestDist = Float.MAX_VALUE;
 
 		int iters=0;
@@ -470,7 +470,7 @@ public class ImgQualityDataCache
 							if (curDist < closestDist)
 							{
 								closestDist = curDist;
-								//DEBUG//closestMarker = examinedMarker;
+								closestMarker = examinedMarker;
 							}
 						}
 					}
@@ -504,14 +504,14 @@ public class ImgQualityDataCache
 		{
 			//objDistance.otherMarker = closestMarker;
 			//objDistance.distance = closestDist;
-			//DEBUG//log.info(curMarker+" found his neighbor "+closestMarker+" at distance "+closestDist+" isotropic voxels.");
+			log.info(curMarker+" found his neighbor "+closestMarker+" at distance "+closestDist+" isotropic voxels.");
 			return (closestDist);
 		}
 		else
 		{
 			//objDistance.otherMarker = -1;
 			//objDistance.distance = (float)maxIters;
-			//DEBUG//log.info(curMarker+" has not found his neighbor with in "+maxIters+" iterations.");
+			log.info(curMarker+" has not found his neighbor with in "+maxIters+" iterations.");
 			return ((float)maxIters);
 		}
 	}
