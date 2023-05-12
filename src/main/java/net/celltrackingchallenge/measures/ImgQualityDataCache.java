@@ -694,7 +694,7 @@ public class ImgQualityDataCache
 			{
 				//found not-yet-processed FG voxel,
 				//that means: found not-yet-processed FG object
-				extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
+				//DISABLED_BECAUSE_OF_TIME_MEASUREMENT  //extractFGObjectStats(rawCursor, time, imgFG, imgFGprev, data);
 
 				if (doDensityPrecalculation)
 					data.nearDistFG.get(time).put(curMarker,
