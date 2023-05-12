@@ -681,6 +681,9 @@ public class ImgQualityDataCache
 		data.overlapFG.add( new HashMap<>() );
 		data.nearDistFG.add( new HashMap<>() );
 
+		//start of time measurement
+		long watchedTime = System.currentTimeMillis();
+
 		rawCursor.reset();
 		while (rawCursor.hasNext())
 		{
@@ -704,6 +707,10 @@ public class ImgQualityDataCache
 				mDiscovered.add(curMarker);
 			}
 		}
+
+		//end of time measurement
+		watchedTime = System.currentTimeMillis() - watchedTime;
+		log.info("processing time: "+((float)watchedTime/1000.f)+" seconds");
 	}
 
 	//---------------------------------------------------------------------/
