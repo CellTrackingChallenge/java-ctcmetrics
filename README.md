@@ -1,3 +1,5 @@
+[![Build Status](https://github.com/CellTrackingChallenge/measures/actions/workflows/build.yml/badge.svg)](https://github.com/CellTrackingChallenge/measures/actions/workflows/build.yml)
+
 Welcome
 -------
 This is a repository with Java source codes of tools related to the [Cell Tracking Challenge](http://www.celltrackingchallenge.net), and to the quantitative evaluation of biomedical segmentation and tracking in general.
