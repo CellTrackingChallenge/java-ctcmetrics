@@ -236,20 +236,8 @@ public class TF
 	                        final TrackDataCache _cache)
 	throws IOException, ImgIOException
 	{
-		//invalidate own cache
-		cache = null;
-
-		//check we got some hint/cache
-		//and if it fits our input, then use it
-		if (_cache != null && _cache.validFor(gtPath,resPath)) cache = _cache;
-
-		//if no cache is available after all, compute it
-		if (cache == null)
-		{
-			//do the upper stage
-			cache = new TrackDataCache(log);
-			cache.calculate(gtPath,resPath);
-		}
+		//obtain a cache
+		cache = TrackDataCache.reuseOrCreateAndCalculateNewCache(_cache,gtPath,resPath,log);
 
 		//do the bottom stage
 		//DEBUG//log.info("Computing the TF bottom part...");
