@@ -48,7 +48,7 @@ public class RES extends AbstractDSmeasure
 		//do the bottom stage
 		//DEBUG//log.info("Computing the RES bottom part...");
 		double res = 0.0;
-		long fgCnt = 0; //how many videos were processed
+		long videoCnt = 0; //how many videos were processed
 
 		//go over all encountered videos and calc
 		//their respective avg. RESes and average them
@@ -60,6 +60,7 @@ public class RES extends AbstractDSmeasure
 			//go over all FG objects and calc their RESs
 			long noFGs = 0;
 			double l_res = 0.0;
+
 			//over all time points
 			for (int time=0; time < volumeFG.size(); ++time)
 			{
@@ -76,19 +77,20 @@ public class RES extends AbstractDSmeasure
 			//finish the calculation of the average
 			if (noFGs > 0)
 			{
-				log.info("RES for video "+data.video+": "+l_res/(double)noFGs);
+				l_res /= (double)noFGs;
+				log.info("RES for video "+data.video+": "+l_res);
 
 				res += l_res;
-				fgCnt += noFGs;
+				++videoCnt;
 			}
 			else
 				log.info("RES for video "+data.video+": Couldn't calculate average RES because there are no cells labelled.");
 		}
 
 		//summarize over all datasets:
-		if (fgCnt > 0)
+		if (videoCnt > 0)
 		{
-			res /= (double)fgCnt;
+			res /= (double)videoCnt;
 			log.info("RES for dataset: "+res);
 		}
 		else
