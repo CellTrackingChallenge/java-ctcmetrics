@@ -189,7 +189,7 @@ public class ImgQualityDataCache
 		public int video;
 
 		/**
-		 * Representation of average & std. deviations within individual
+		 * Representation of average and std. deviations within individual
 		 * foreground masks.
 		 * Usage: avgFG[timePoint].get(labelID) = averageIntensityValue
 		 */
@@ -233,7 +233,7 @@ public class ImgQualityDataCache
 		public final Vector<Map<Integer,int[]>> boundingBoxesFG = new Vector<>(1000,100);
 
 		/**
-		 * Representation of average & std. deviations of background region.
+		 * Representation of average and std. deviations of background region.
 		 * There is only one background marker expected in the images.
 		 */
 		public final Vector<Double> avgBG = new Vector<>(1000,100);
