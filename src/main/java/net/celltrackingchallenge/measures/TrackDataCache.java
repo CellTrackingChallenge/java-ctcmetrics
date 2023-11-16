@@ -57,7 +57,10 @@ public class TrackDataCache
 	///shortcuts to some Fiji services
 	private final Logger log;
 
-	///a constructor requiring connection to Fiji report/log services
+	/**
+	 * Construct and connect to Fiji report/log services.
+	 * @param _log Logger from the scijava
+	 */
 	public TrackDataCache(final Logger _log)
 	{
 		//check that non-null was given for _log!
@@ -75,7 +78,13 @@ public class TrackDataCache
 	///GT and RES paths combination for which this cache is valid, null means invalid
 	private String resPath = null;
 
-	///reference-based-only check if the parameters are those on which this cache was computed
+	/**
+	 * Reference-based-only check if the parameters are those on which this cache was computed.
+	 *
+	 * @param _gtPath Was this cache recently operated against this GT data folder?
+	 * @param _resPath Was this cache recently operated against this result data folder?
+	 * @return Returns true if this cache was operated also against the provided folders.
+	 */
 	public boolean validFor(final String _gtPath, final String _resPath)
 	{
 		return ( gtPath != null &&  resPath != null
