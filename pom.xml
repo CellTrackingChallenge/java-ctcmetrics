@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
@@ -11,16 +12,14 @@
 	<artifactId>CTC-measures</artifactId>
 	<version>1.0.2-SNAPSHOT</version>
 
-	<organization>
-		<name>The Cell Tracking Challenge</name>
-		<url>http://celltrackingchallenge.net</url>
-	</organization>
-
 	<name>Cell Tracking Challenge -- Java Measures</name>
 	<description>Java implementation of measures for quantitative evaluation of biomedical tracking in general.</description>
 	<url>https://github.com/CellTrackingChallenge/measures</url>
 	<inceptionYear>2017</inceptionYear>
-
+	<organization>
+		<name>The Cell Tracking Challenge</name>
+		<url>http://celltrackingchallenge.net</url>
+	</organization>
 	<licenses>
 		<license>
 			<name>Simplified BSD</name>
@@ -45,7 +44,6 @@
 			</roles>
 		</developer>
 	</developers>
-
 	<contributors>
 		<contributor>
 			<name>None</name>
@@ -54,38 +52,72 @@
 
 	<mailingLists>
 		<mailingList>
-			<name>ImageJ Forum</name>
-			<archive>http://forum.imagej.net/</archive>
+			<name>Image.sc Forum</name>
+			<archive>https://forum.image.sc/</archive>
 		</mailingList>
 	</mailingLists>
 
-	<!-- ====================================== -->
-
 	<scm>
+		<connection>scm:git:https://github.com/CellTrackingChallenge/measures</connection>
+		<developerConnection>scm:git:git@github.com:CellTrackingChallenge/measures</developerConnection>
 		<tag>HEAD</tag>
 		<url>https://github.com/CellTrackingChallenge/measures</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>http://github.com/CellTrackingChallenge/measures/issues</url>
+		<url>https://github.com/CellTrackingChallenge/measures/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>none</system>
 	</ciManagement>
 
-	<distributionManagement>
-		<repository>
-			<id>it4i</id>
-			<url>https://artifactory.cs.vsb.cz/it4i/</url>
-		</repository>
-	</distributionManagement>
+	<properties>
+		<package-name>net.celltrackingchallenge.measures</package-name>
 
+		<license.licenseName>BSD 2-Clause</license.licenseName>
+		<license.projectName>CTC-measures</license.projectName>
+		<license.organizationName>Cell Tracking Challenge</license.organizationName>
+		<license.copyrightOwners>xulman</license.copyrightOwners>
+
+		<!-- NB: Deploy releases to the SciJava Maven repository. -->
+		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
+	</properties>
+
+	<dependencies>
+		<!-- for reading/saving images -->
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>simplified-io</artifactId>
+			<version>1.0.1</version>
+			<exclusions>
+				<exclusion>
+					<groupId>xalan</groupId>
+					<artifactId>xalan</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- for meshes -->
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej-ops</artifactId>
+		</dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>scijava.public</id>
+			<url>https://maven.scijava.org/content/groups/public</url>
+		</repository>
+	</repositories>
+
+	<!-- to introduce Vlado's favourite COMMITrev file into the released .jar files -->
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>pl.project13.maven</groupId>
 				<artifactId>git-commit-id-plugin</artifactId>
-				<version>2.2.4</version>
+				<version>4.9.10</version>
 				<executions>
 					<execution>
 						<phase>validate</phase>
@@ -105,90 +137,25 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>exec-maven-plugin</artifactId>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
 				<executions>
 					<execution>
 						<phase>generate-sources</phase>
 						<goals>
-							<goal>exec</goal>
+							<goal>run</goal>
 						</goals>
 					</execution>
 				</executions>
 				<configuration>
-					<executable>sh</executable>
-					<arguments>
-						<argument>-c</argument>
-						<argument>rm -v '${project.build.outputDirectory}'/COMMITrev_*; touch '${project.build.outputDirectory}'/COMMITrev_${git.commit.id.abbrev}_${project.artifactId};</argument>
-					</arguments>
+					<target>
+						<!-- make sure no COMMITrev tag files are floating around from some previous runs -->
+						<!-- NB: this task is redundant whenever 'mvn clean' is executed... -->
+						<delete><fileset dir="${project.build.outputDirectory}" includes="COMMITrev_*"/></delete>
+						<touch file="${project.build.outputDirectory}/COMMITrev_${git.commit.id.abbrev}_${project.artifactId}"/>
+					</target>
 				</configuration>
-			</plugin>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>3.3.0</version>
-				<configuration>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-					<archive>
-						<manifest>
-							<mainClass>net.celltrackingchallenge.measures.util.BgMaskCreator</mainClass>
-						</manifest>
-					</archive>
-				</configuration>
-				<executions>
-					<execution>
-						<id>make-assembly</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>
-
-	<packaging>jar</packaging>
-
-	<!-- ====================================== -->
-
-	<properties>
-		<package-name>net.celltrackingchallenge.measures</package-name>
-
-		<license.licenseName>BSD 2-Clause</license.licenseName>
-		<license.projectName>CTC-measures</license.projectName>
-		<license.organizationName>Cell Tracking Challenge</license.organizationName>
-		<license.copyrightOwners>xulman</license.copyrightOwners>
-	</properties>
-
-	<repositories>
-		<repository>
-			<id>scijava.public</id>
-			<url>https://maven.scijava.org/content/groups/public</url>
-		</repository>
-	</repositories>
-
-	<dependencies>
-		<!-- for reading/saving images -->
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>simplified-io</artifactId>
-			<version>1.0.1</version>
-
-			<exclusions>
-				<exclusion>
-					<groupId>xalan</groupId>
-					<artifactId>xalan</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-		<!-- for meshes -->
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-ops</artifactId>
-			<version>${imagej-ops.version}</version>
-		</dependency>
-	</dependencies>
 </project>
