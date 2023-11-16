@@ -70,6 +70,20 @@ public class TrackDataCache
 		log = _log;
 	}
 
+	/**
+	 * Adapt relevant, controlling parameters of this cache to be the same
+	 * as they are in the provided cache. Example is the number of digits used.
+	 * @param _referenceCache The reference cache whose behaviour to mimic
+	 */
+	public void setupSimilarAs(final TrackDataCache _referenceCache)
+	{
+		//check that there's something to mimic...
+		if (_referenceCache == null)
+			throw new NullPointerException("No existing (null) template/reference cache has been supplied.");
+
+		noOfDigits = _referenceCache.noOfDigits;
+	}
+
 	///specifies how many digits are to be expected in the input filenames
 	public int noOfDigits = 3;
 
@@ -91,6 +105,34 @@ public class TrackDataCache
 		     && _gtPath != null && _resPath != null
 		     && gtPath == _gtPath
 		     && resPath == _resPath);
+	}
+
+	/**
+	 * Returns a cache that's ready for the provided paths. It attempts to reuse the provided
+	 * 'cacheConsideredForReusing' if possible, otherwise it creates a brand new one. The brand
+	 * new one attempts to mimic the provided with {@link TrackDataCache#setupSimilarAs(TrackDataCache)},
+	 * if there's one provided (not null).
+	 *
+	 * @param cacheConsideredForReusing Check for validity and try to reuse this cache in the first place.
+	 * @param _gtPath Path to ground truth data that's used to check for the validity.
+	 * @param _resPath Path to result data that's used to check for the validity.
+	 * @param log When new cache is created, connect it with this Logger.
+	 * @return Prepared (that is {@link TrackDataCache#calculate(String, String)}'ed) cache.
+	 * @throws IOException When creating the new cache failed, e.g. when 'log' is null.
+	 */
+	public static TrackDataCache reuseOrCreateAndCalculateNewCache(
+			final TrackDataCache cacheConsideredForReusing,
+			final String _gtPath,
+			final String _resPath,
+			final Logger log) throws IOException
+	{
+		if (cacheConsideredForReusing != null && cacheConsideredForReusing.validFor(_gtPath, _resPath))
+			return cacheConsideredForReusing;
+
+		TrackDataCache newCache = new TrackDataCache(log);
+		if (cacheConsideredForReusing != null) newCache.setupSimilarAs(cacheConsideredForReusing);
+		newCache.calculate(_gtPath,_resPath);
+		return newCache;
 	}
 
 
