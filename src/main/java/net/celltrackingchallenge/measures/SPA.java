@@ -48,7 +48,7 @@ public class SPA extends AbstractDSmeasure
 		//do the bottom stage
 		//DEBUG//log.info("Computing the SPA bottom part...");
 		double spa = 0.0;
-		long fgCnt = 0; //how many videos were processed
+		long videoCnt = 0; //how many videos were processed
 
 		//go over all encountered videos and calc
 		//their respective avg. SPAs and average them
@@ -90,19 +90,20 @@ public class SPA extends AbstractDSmeasure
 					+" %) cells with no neighbor in the range of 50 voxels.");
 				log.info("SPA for video "+data.video+": There is "+noOfBoringFrames+" ( "+100.0*noOfBoringFrames/(double)nearDistFG.size()
 					+" %) frames with zero or one cell.");
-				log.info("SPA for video "+data.video+": "+l_spa/(double)noFGs);
+				l_spa /= (double)noFGs;
+				log.info("SPA for video "+data.video+": "+l_spa);
 
 				spa += l_spa;
-				fgCnt += noFGs;
+				++videoCnt;
 			}
 			else
 				log.info("SPA for video "+data.video+": Couldn't calculate average SPA because there are no cells labelled.");
 		}
 
 		//summarize over all datasets:
-		if (fgCnt > 0)
+		if (videoCnt > 0)
 		{
-			spa /= (double)fgCnt;
+			spa /= (double)videoCnt;
 			log.info("SPA for dataset: "+spa);
 		}
 		else
