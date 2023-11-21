@@ -84,10 +84,22 @@ public class TrackDataCache
 			throw new NullPointerException("No existing (null) template/reference cache has been supplied.");
 
 		noOfDigits = _referenceCache.noOfDigits;
+		shouldComplainOnEmptyImages = _referenceCache.shouldComplainOnEmptyImages;
+		overlapRatio = _referenceCache.overlapRatio;
 	}
 
-	///specifies how many digits are to be expected in the input filenames
+	/** specifies how many digits are to be expected in the input filenames */
 	public int noOfDigits = 3;
+
+	/** specifies if the processing should stop when an input image with no segmentation/detection is found,
+	    it's advisable to stop on empty images, the code may assume at places that there's always at least
+	    one segmentation mask found in every image and definitively the code assumes that there's at least
+	    one mask in a whole sequence (otherwise division by zero will occur) */
+	public boolean shouldComplainOnEmptyImages = true;
+
+	/** specifies what relative proportion of the area of a GT marker must be covered in order to declare a match,
+	    it's advisable to avoid going below 0.5, the code may assume at places that overlapRatio >= 0.5 */
+	public double overlapRatio = 0.5;
 
 	///GT and RES paths combination for which this cache is valid, null means invalid
 	private String gtPath = null;
