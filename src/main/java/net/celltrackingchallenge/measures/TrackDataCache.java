@@ -46,6 +46,7 @@ import java.nio.file.Files;
 
 import java.io.FileReader;
 import java.io.BufferedReader;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 import java.util.Vector;
@@ -769,6 +770,16 @@ public class TrackDataCache
 	}
 
 	//---------------------------------------------------------------------/
+	private boolean doesTheFileExists(final String filePath) {
+		final boolean isExist = Files.isReadable( Paths.get(filePath) );
+		if (!isExist) {
+			log.info("(Note, Stopped reading on a file: "+filePath);
+			log.info("       It's okay when at the end of the video,");
+			log.info("       otherwise: Wrong number of digits? Wrong folder?)");
+		}
+		return isExist;
+	}
+
 	/**
 	 * Measure calculation happens in two stages. The first/upper stage does
 	 * data pre-fetch and calculations to populate the TrackDataCache.
@@ -796,8 +807,7 @@ public class TrackDataCache
 		//find the appropriate file in the RES folder,
 		//and call ClassifyLabels() for every such pair
 		int time = 0;
-		while (Files.isReadable(
-			new File(String.format("%s/TRA/man_track%0"+noOfDigits+"d.tif",gtPath,time)).toPath()))
+		while (doesTheFileExists(String.format("%s/TRA/man_track%0"+noOfDigits+"d.tif",gtPath,time)))
 		{
 			//read the image pair
 			Img<UnsignedShortType> gt_img
