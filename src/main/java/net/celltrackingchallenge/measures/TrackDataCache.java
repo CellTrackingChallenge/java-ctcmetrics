@@ -534,14 +534,14 @@ public class TrackDataCache
 	{
 		//default behavior is to be very strict:
 		//  complain whenever empty result or GT image is found
-		ClassifyLabels(gt_img,res_img, true, levels.size(), 0.5);
+		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, levels.size(), overlapRatio);
 	}
 
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
 	                           RandomAccessibleInterval<UnsignedShortType> res_img,
-	                           final boolean shouldComplainOnEmptyImages)
+	                           final boolean _shouldComplainOnEmptyImages)
 	{
-		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, levels.size(), 0.5);
+		ClassifyLabels(gt_img,res_img, _shouldComplainOnEmptyImages, levels.size(), overlapRatio);
 	}
 
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
@@ -550,23 +550,23 @@ public class TrackDataCache
 	{
 		//default behavior is to be very strict:
 		//  complain whenever empty result or GT image is found
-		ClassifyLabels(gt_img,res_img, true, time, 0.5);
+		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, time, overlapRatio);
 	}
 
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
 	                           RandomAccessibleInterval<UnsignedShortType> res_img,
-	                           final boolean shouldComplainOnEmptyImages,
+	                           final boolean _shouldComplainOnEmptyImages,
 	                           final int time)
 	{
 		//default behavior is to be very strict:
 		//  complain whenever empty result or GT image is found
-		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, time, 0.5);
+		ClassifyLabels(gt_img,res_img, _shouldComplainOnEmptyImages, time, overlapRatio);
 	}
 
 	@SuppressWarnings("unchecked")
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
 	                           RandomAccessibleInterval<UnsignedShortType> res_img,
-	                           final boolean shouldComplainOnEmptyImages,
+	                           final boolean _shouldComplainOnEmptyImages,
 	                           final int time,
 	                           final double overlapRatio)
 	{
@@ -646,9 +646,9 @@ public class TrackDataCache
 		}
 
 		//check the images are not completely blank
-		if (shouldComplainOnEmptyImages && level.m_res_lab.length == 0)
+		if (_shouldComplainOnEmptyImages && level.m_res_lab.length == 0)
 			throw new IllegalArgumentException("RES image has no markers!");
-		if (shouldComplainOnEmptyImages && level.m_gt_lab.length == 0)
+		if (_shouldComplainOnEmptyImages && level.m_gt_lab.length == 0)
 			throw new IllegalArgumentException("GT image has no markers!");
 
 		//we don't need this one anymore
