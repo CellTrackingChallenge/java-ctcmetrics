@@ -10,7 +10,7 @@
 
 	<groupId>net.celltrackingchallenge</groupId>
 	<artifactId>CTC-measures</artifactId>
-	<version>1.0.2-SNAPSHOT</version>
+	<version>1.0.3-SNAPSHOT</version>
 
 	<name>Cell Tracking Challenge -- Java Measures</name>
 	<description>Java implementation of measures for quantitative evaluation of biomedical tracking in general.</description>
@@ -151,8 +151,8 @@
 					<target>
 						<!-- make sure no COMMITrev tag files are floating around from some previous runs -->
 						<!-- NB: this task is redundant whenever 'mvn clean' is executed... -->
-						<delete><fileset dir="${project.build.outputDirectory}" includes="COMMITrev_*"/></delete>
-						<touch file="${project.build.outputDirectory}/COMMITrev_${git.commit.id.abbrev}_${project.artifactId}"/>
+						<delete><fileset dir="${project.build.outputDirectory}" includes="COMMITrev_*" /></delete>
+						<touch file="${project.build.outputDirectory}/COMMITrev_${git.commit.id.abbrev}_${project.artifactId}" />
 					</target>
 				</configuration>
 			</plugin>
