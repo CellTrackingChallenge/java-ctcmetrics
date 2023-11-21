@@ -131,11 +131,11 @@ public class BgMaskCreator {
 			return this;
 		}
 
-		public Builder createIndividualMaskForEachTimepoint() {
+		public Builder setupToCreateIndividualMaskForEachTimepoint() {
 			doMaskValidForAllTPs = false;
 			return this;
 		}
-		public Builder findMaskValidForAllTimepoints() {
+		public Builder setupToFindOneMaskValidForAllTimepoints() {
 			doMaskValidForAllTPs = true;
 			return this;
 		}
@@ -175,8 +175,8 @@ public class BgMaskCreator {
 				.setupForCTC(Paths.get(mainFolder),digits,erosion)
 				.forTheseTimepointsOnly(tps)
 				.setSciJavaLogger(new SimpleConsoleLogger());
-		if (args.length == 5) b.findMaskValidForAllTimepoints();
-		else b.createIndividualMaskForEachTimepoint();
+		if (args.length == 5) b.setupToFindOneMaskValidForAllTimepoints();
+		else b.setupToCreateIndividualMaskForEachTimepoint();
 
 		try {
 			b.build().run();
