@@ -35,17 +35,13 @@ This is a maven project. You can make it available in your maven projects with t
 			<id>scijava.public</id>
 			<url>https://maven.scijava.org/content/groups/public</url>
 		</repository>
-		<repository>
-			<id>it4i</id>
-			<url>https://artifactory.cs.vsb.cz/it4i/</url>
-		</repository>
 	</repositories>
 
 	<dependencies>
 		<dependency>
 			<groupId>net.celltrackingchallenge</groupId>
 			<artifactId>CTC-measures</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.3</version>
 		</dependency>
 	</dependencies>
 ```
