@@ -84,10 +84,22 @@ public class TrackDataCache
 			throw new NullPointerException("No existing (null) template/reference cache has been supplied.");
 
 		noOfDigits = _referenceCache.noOfDigits;
+		shouldComplainOnEmptyImages = _referenceCache.shouldComplainOnEmptyImages;
+		overlapRatio = _referenceCache.overlapRatio;
 	}
 
-	///specifies how many digits are to be expected in the input filenames
+	/** specifies how many digits are to be expected in the input filenames */
 	public int noOfDigits = 3;
+
+	/** specifies if the processing should stop when an input image with no segmentation/detection is found,
+	    it's advisable to stop on empty images, the code may assume at places that there's always at least
+	    one segmentation mask found in every image and definitively the code assumes that there's at least
+	    one mask in a whole sequence (otherwise division by zero will occur) */
+	public boolean shouldComplainOnEmptyImages = true;
+
+	/** specifies what relative proportion of the area of a GT marker must be covered in order to declare a match,
+	    it's advisable to avoid going below 0.5, the code may assume at places that overlapRatio >= 0.5 */
+	public double overlapRatio = 0.5;
 
 	///GT and RES paths combination for which this cache is valid, null means invalid
 	private String gtPath = null;
@@ -522,14 +534,14 @@ public class TrackDataCache
 	{
 		//default behavior is to be very strict:
 		//  complain whenever empty result or GT image is found
-		ClassifyLabels(gt_img,res_img, true, levels.size(), 0.5);
+		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, levels.size(), overlapRatio);
 	}
 
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
 	                           RandomAccessibleInterval<UnsignedShortType> res_img,
-	                           final boolean shouldComplainOnEmptyImages)
+	                           final boolean _shouldComplainOnEmptyImages)
 	{
-		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, levels.size(), 0.5);
+		ClassifyLabels(gt_img,res_img, _shouldComplainOnEmptyImages, levels.size(), overlapRatio);
 	}
 
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
@@ -538,23 +550,23 @@ public class TrackDataCache
 	{
 		//default behavior is to be very strict:
 		//  complain whenever empty result or GT image is found
-		ClassifyLabels(gt_img,res_img, true, time, 0.5);
+		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, time, overlapRatio);
 	}
 
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
 	                           RandomAccessibleInterval<UnsignedShortType> res_img,
-	                           final boolean shouldComplainOnEmptyImages,
+	                           final boolean _shouldComplainOnEmptyImages,
 	                           final int time)
 	{
 		//default behavior is to be very strict:
 		//  complain whenever empty result or GT image is found
-		ClassifyLabels(gt_img,res_img, shouldComplainOnEmptyImages, time, 0.5);
+		ClassifyLabels(gt_img,res_img, _shouldComplainOnEmptyImages, time, overlapRatio);
 	}
 
 	@SuppressWarnings("unchecked")
 	public void ClassifyLabels(IterableInterval<UnsignedShortType> gt_img,
 	                           RandomAccessibleInterval<UnsignedShortType> res_img,
-	                           final boolean shouldComplainOnEmptyImages,
+	                           final boolean _shouldComplainOnEmptyImages,
 	                           final int time,
 	                           final double overlapRatio)
 	{
@@ -634,9 +646,9 @@ public class TrackDataCache
 		}
 
 		//check the images are not completely blank
-		if (shouldComplainOnEmptyImages && level.m_res_lab.length == 0)
+		if (_shouldComplainOnEmptyImages && level.m_res_lab.length == 0)
 			throw new IllegalArgumentException("RES image has no markers!");
-		if (shouldComplainOnEmptyImages && level.m_gt_lab.length == 0)
+		if (_shouldComplainOnEmptyImages && level.m_gt_lab.length == 0)
 			throw new IllegalArgumentException("GT image has no markers!");
 
 		//we don't need this one anymore

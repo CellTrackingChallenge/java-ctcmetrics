@@ -79,6 +79,10 @@ public class TRA
 	 */
 	public boolean doConsistencyCheck = false;
 
+	/** This switches SEG to complain (and stop calculating)
+	 if empty ground-truth or result image was found. */
+	public boolean doStopOnEmptyImages = true;
+
 	/**
 	 * Calculation option: do report list of discrepancies between the reference
 	 * and computed tracking result.
@@ -551,6 +555,7 @@ public class TRA
 			//do the upper stage
 			cache = new TrackDataCache(log);
 			cache.noOfDigits = noOfDigits;
+			cache.shouldComplainOnEmptyImages = doStopOnEmptyImages;
 			cache.calculate(gtPath,resPath);
 		}
 
