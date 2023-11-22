@@ -98,7 +98,7 @@ public class TrackDataCache
 	public boolean shouldComplainOnEmptyImages = true;
 
 	/** specifies what relative proportion of the area of a GT marker must be covered in order to declare a match,
-	    it's advisable to avoid going below 0.5, the code may assume at places that overlapRatio >= 0.5 */
+	    it's advisable to avoid going below 0.5, the code may assume at places that overlapRatio &ge; 0.5 */
 	public double overlapRatio = 0.5;
 
 	///GT and RES paths combination for which this cache is valid, null means invalid
