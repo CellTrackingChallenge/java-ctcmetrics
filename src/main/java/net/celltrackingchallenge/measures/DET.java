@@ -84,6 +84,7 @@ public class DET extends TRA
 			//do the upper stage
 			cache = new TrackDataCache(log);
 			cache.noOfDigits = noOfDigits;
+			cache.shouldComplainOnEmptyImages = doStopOnEmptyImages;
 
 			log.info(" GT path: "+gtPath+"/TRA");
 			log.info("RES path: "+resPath);
