@@ -10,7 +10,7 @@
 
 	<groupId>net.celltrackingchallenge</groupId>
 	<artifactId>CTC-measures</artifactId>
-	<version>1.0.3-SNAPSHOT</version>
+	<version>1.0.4-SNAPSHOT</version>
 
 	<name>Cell Tracking Challenge -- Java Measures</name>
 	<description>Java implementation of measures for quantitative evaluation of biomedical tracking in general.</description>
