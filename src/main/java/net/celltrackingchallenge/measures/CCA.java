@@ -139,6 +139,8 @@ public class CCA
 				final int id = parent.m_parent_id;
 				final int length = gt_tracks.get(id).m_end - gt_tracks.get(id).m_begin +1;
 
+				log.info("GT full track discovered: ID="+id+", TP from="+gt_tracks.get(id).m_begin+" to="+gt_tracks.get(id).m_end);
+
 				//add the length to the histogram
 				Integer count = gt_lenHist.get(length);
 				gt_lenHist.put(length, count == null ? 1 : count+1);
@@ -161,6 +163,8 @@ public class CCA
 				//detected connecting track, its id and its duration/length
 				final int id = parent.m_parent_id;
 				final int length = res_tracks.get(id).m_end - res_tracks.get(id).m_begin +1;
+
+				log.info("RES full track discovered: ID="+id+", TP from="+res_tracks.get(id).m_begin+" to="+res_tracks.get(id).m_end);
 
 				Integer count = res_lenHist.get(length);
 				res_lenHist.put(length, count == null ? 1 : count+1);

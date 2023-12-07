@@ -777,6 +777,8 @@ public class TrackDataCache
 			{
 				//yes, create the fork then
 				forks.add( new Fork(parent,kids) );
+			} else {
+				log.warn("There's fork (ID "+parent+") with exactly one kid (ID "+kids.get(0)+")");
 			}
 		}
 	}
@@ -843,7 +845,9 @@ public class TrackDataCache
 			throw new IllegalArgumentException("No reference (GT) track was found!");
 
 		//calculate all forks -- branching events
+		log.info("Going to detect GT forks");
 		DetectForks(gt_tracks,  gt_forks);
+		log.info("Going to detect RES forks");
 		DetectForks(res_tracks, res_forks);
 
 		//now that we got here, note for what data
