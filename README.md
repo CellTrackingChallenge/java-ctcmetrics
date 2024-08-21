@@ -21,6 +21,8 @@ were at that time affiliated with the following groups: [CIMA](http://www.cima.e
 The tools were developed and the page is maintained by [Vladimír Ulman](http://www.fi.muni.cz/~xulman/).
 The SEG, TRA/AOGM and DET measures were originally developed in C++ by [Martin Maška](http://cbia.fi.muni.cz/).
 
+### Note:
+In Aug 2024 the repository was renamed from `measures` to `java-ctcmetrics`, but the Maven GAV hasn't changed. 
 
 Installation
 ------------
